@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TraceBook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,500&family=Newsreader:ital,wght@0,400;0,600;1,400&family=Schibsted+Grotesk:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#EEF1EF;--paper2:#E2E8E6;--ink:#17233F;--pencil:#6A778C;--margin:#C8473B;--line:#C9D3D6;--me:#2B4C9B;
+--ui:"Schibsted Grotesk",system-ui,sans-serif;--txt:"Newsreader",Georgia,serif;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root{--paper:#141B2B;--paper2:#1B2438;--ink:#E7ECF4;--pencil:#8E9BB3;--margin:#E26A5D;--line:#26314A;--me:#8FB0FF}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--ui);overflow:hidden}
+#app{display:flex;height:100%}
+aside{width:300px;flex:none;background:var(--paper2);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.brand{padding:18px 20px 12px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line)}
+.brand svg{width:46px;height:46px;flex:none;color:var(--ink)}
+.brand svg .tr{stroke:var(--margin)}
+.brand h2{margin:0;font-family:"Cormorant Garamond","Times New Roman",serif;font-weight:700;font-size:31px;line-height:1;letter-spacing:.01em}
+.brand small{display:block;font-family:"Cormorant Garamond",Georgia,serif;font-style:italic;font-weight:500;font-size:15px;color:var(--pencil);margin-top:4px}
+#rooms{flex:1;overflow-y:auto;padding:6px 0}
+.room{display:block;width:100%;text-align:left;background:none;border:0;border-left:4px solid transparent;padding:12px 20px;color:inherit;font:inherit;cursor:pointer}
+.room.on{border-left-color:var(--margin);background:var(--paper)}
+.room b{display:flex;justify-content:space-between;gap:8px;font-weight:600}
+.room i{font-style:normal;font-weight:400;font-size:12px;color:var(--pencil)}
+.room p{margin:3px 0 0;font-size:14px;color:var(--pencil);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.side-foot{padding:12px 20px 16px;border-top:1px solid var(--line);display:grid;gap:8px}
+input,textarea{font:inherit;color:inherit;background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:9px 10px;width:100%}
+main{flex:1;display:flex;flex-direction:column;min-width:0;min-height:0}
+header.top{display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line)}
+header.top h1{margin:0;font-size:19px;font-weight:800;letter-spacing:-.02em}
+header.top p{margin:0;font-size:13px;color:var(--pencil)}
+#back{display:none;background:none;border:1px solid var(--line);border-radius:4px;color:inherit;font:inherit;padding:6px 10px;cursor:pointer}
+#log{flex:1;overflow-y:auto;padding:12px 20px 8px 0;background-image:repeating-linear-gradient(transparent 0 33px,var(--line) 33px 34px);background-attachment:local}
+.msg{display:grid;grid-template-columns:78px 2px 1fr;column-gap:16px;min-height:34px}
+.msg time{font-size:12px;color:var(--pencil);text-align:right;padding-top:7px}
+.msg .rule{background:var(--margin);opacity:.75}
+.msg .body{padding:2px 0 3px;max-width:62ch;font-family:var(--txt);font-size:18px;line-height:34px;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg .who{font-family:var(--ui);font-weight:800;font-size:14px;margin-right:8px}
+.msg.me .who{color:var(--me)}
+.msg.me .body{font-style:italic}
+.day{margin:6px 0;padding-left:94px;font-size:13px;font-weight:600;color:var(--pencil);line-height:34px}
+form{display:flex;gap:10px;padding:12px 20px 14px;border-top:1px solid var(--line);background:var(--paper2)}
+textarea{resize:none;max-height:140px;font-family:var(--txt);font-size:17px}
+button.send{border:0;background:var(--ink);color:var(--paper);font:inherit;font-weight:600;padding:0 22px;border-radius:4px;cursor:pointer}
+button.send:disabled{opacity:.35}
+.newroom{display:flex;gap:6px}.newroom button{border:1px solid var(--line);background:var(--paper);color:inherit;border-radius:4px;padding:0 12px;font:inherit;cursor:pointer}
+#gate{position:fixed;inset:0;z-index:10;background:var(--paper);display:flex;align-items:center;justify-content:center;padding:20px}
+#gate .card{max-width:380px;width:100%;border:1px solid var(--line);background:var(--paper2);padding:28px;border-radius:4px;border-left:4px solid var(--margin)}
+#gate h2{margin:0 0 8px;font-family:"Cormorant Garamond",Georgia,serif;font-size:30px}
+#gate p{margin:0 0 18px;line-height:1.5;color:var(--pencil)}
+#gb{display:grid;gap:10px}
+.btn{font:inherit;font-weight:600;padding:11px 14px;border-radius:4px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.acct{display:flex;align-items:center;gap:10px}.acct div{flex:1;min-width:0}
+.acct b{display:block;font-size:14px}.acct small{display:block;font-size:12px;color:var(--pencil);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.acct .av{width:32px;height:32px;border-radius:50%;background:var(--ink);color:var(--paper);display:grid;place-items:center;font-weight:800;flex:none;object-fit:cover}
+.acct button{border:1px solid var(--line);background:var(--paper);color:inherit;border-radius:4px;font:inherit;font-size:13px;padding:6px 10px;cursor:pointer}
+@media (max-width:760px){
+aside{width:100%;border-right:0}
+#app.chatting aside{display:none}
+#app:not(.chatting) main{display:none}
+#back{display:block}
+.msg{grid-template-columns:52px 2px 1fr;column-gap:10px}
+.day{padding-left:64px}
+#log{padding-right:12px}.msg .body{font-size:17px}
+}
+</style>
+</head>
+<body>
+<div id="gate" role="dialog" aria-label="Sign in"><div class="card">
+ <h2>Welcome to TraceBook</h2>
+ <p id="gp">Sign in to join the conversation.</p>
+ <div id="gb">
+  <button class="btn primary" id="gg" type="button">Continue with Google</button>
+  <form id="ef" style="display:grid;gap:10px;padding:0;border:0;background:none">
+   <input id="gn" placeholder="Your name" autocomplete="name" style="display:none">
+   <input id="ge" type="email" placeholder="Email" autocomplete="email" required>
+   <input id="gw" type="password" placeholder="Password (6+ characters)" autocomplete="current-password" required minlength="6">
+   <button class="btn" id="gs" type="submit">Sign in with email</button>
+  </form>
+  <button class="btn" id="gm" type="button" style="border:0;background:none;text-decoration:underline">New here? Create an account</button>
+  <button class="btn" id="gr" type="button" style="border:0;background:none;font-weight:400;color:var(--pencil)">Forgot password</button>
+  <p id="ger" role="alert" style="color:var(--margin);margin:0;font-size:14px"></p>
+ </div></div></div>
+<div id="app">
+ <aside>
+  <div class="brand">
+   <svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" role="img" aria-label="TraceBook logo">
+    <circle cx="24" cy="24" r="22.5"/><circle cx="24" cy="24" r="19.5" stroke-width=".7"/>
+    <path d="M24 34.5C19.5 31 13.5 30 10 31.2V15.2C13.5 14 19.5 15 24 18.8C28.5 15 34.5 14 38 15.2V31.2C34.5 30 28.5 31 24 34.5Z"/>
+    <path d="M24 18.8V34.5" stroke-width="1.2"/>
+    <path class="tr" d="M13 21.5C17 20 20.5 22 24 24.5C27.5 27 31 25.5 35 23.5" stroke-width="1.8"/>
+    <path d="M24 5.5l1.2 2.4 2.6.4-1.9 1.8.5 2.6L24 11.4l-2.4 1.3.5-2.6-1.9-1.8 2.6-.4z" stroke-width=".8" fill="currentColor"/>
+   </svg>
+   <div><h2>TraceBook</h2><small>Every conversation, kept on the page.</small></div>
+  </div>
+  <div id="rooms" role="list"></div>
+  <div class="side-foot">
+   <form class="newroom" id="nf" style="padding:0;border:0;background:none">
+    <input id="nr" placeholder="Start a new trace" aria-label="New trace name" maxlength="30">
+    <button type="submit">Add</button>
+   </form>
+   <div class="acct" id="acct"></div>
+  </div>
+ </aside>
+ <main>
+  <header class="top"><button id="back" aria-label="Back to traces">Back</button><div><h1 id="rt"></h1><p id="rs"></p></div></header>
+  <div id="log" aria-live="polite"></div>
+  <form id="f"><textarea id="t" rows="1" placeholder="Write a message" aria-label="Message"></textarea><button class="send" id="s" disabled>Send</button></form>
+ </main>
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>
