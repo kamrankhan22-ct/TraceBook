@@ -1,6 +1,6 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import {getFirestore,collection,addDoc,onSnapshot,query,orderBy,limit} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import {getFirestore,collection,addDoc,onSnapshot,query,orderBy,limit,doc,getDoc,setDoc} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
 
 const $=i=>document.getElementById(i);
@@ -10,9 +10,14 @@ const esc=x=>{const d=document.createElement('div');d.textContent=x;return d.inn
 const dayLabel=ts=>{const d=new Date(ts),n=new Date(),y=new Date(Date.now()-864e5);
  return d.toDateString()===n.toDateString()?'Today':d.toDateString()===y.toDateString()?'Yesterday':d.toLocaleDateString([],{weekday:'long',month:'short',day:'numeric'})};
 
+if(!firebaseConfig.apiKey||firebaseConfig.apiKey.startsWith('YOUR_')){
+ $('gp').textContent='Setup needed: paste your Firebase keys into firebase-config.js (see README.md).';
+ $('gb').style.display='none';throw new Error('Missing Firebase config');
+}
 const fb=initializeApp(firebaseConfig),auth=getAuth(fb),db=getFirestore(fb);
 let me=null,rooms=[],cur=null,msgs=[],unsubR=null,unsubM=null,creating=false;
 
+/* ---------- sign in ---------- */
 const err=m=>{$('ger').textContent=m||''};
 const friendly=e=>({
  'auth/invalid-credential':'Email or password is wrong.','auth/wrong-password':'Email or password is wrong.',
@@ -34,14 +39,15 @@ $('ef').onsubmit=async e=>{e.preventDefault();err();const em=$('ge').value.trim(
 $('gr').onclick=async()=>{const em=$('ge').value.trim();if(!em){err('Type your email first, then choose Forgot password.');return}
  try{await sendPasswordResetEmail(auth,em);err('');$('gp').textContent='Password reset email sent to '+em+'.'}catch(x){err(friendly(x))}};
 
+/* ---------- chat ---------- */
 function chip(){const a=$('acct'),n=me.displayName||me.email||'You';
- a.innerHTML=(me.photoURL?'<img class="av" alt="" referrerpolicy="no-referrer" src="'+esc(me.photoURL)+'">':'<span class="av">'+esc(n.charAt(0).toUpperCase())+'</span>')+'<div><b>'+esc(n)+'</b><small>'+esc(me.email||'')+'</small></div><button id="so" type="button">Sign out</button>';
- $('so').onclick=()=>signOut(auth)}
+ a.innerHTML=(me.photoURL?'<img class="av" alt="" referrerpolicy="no-referrer" src="'+esc(me.photoURL)+'">':'<span class="av" style="background:'+esc(prof.color||'')+'">'+esc(n.charAt(0).toUpperCase())+'</span>')+'<div><b>'+esc(n)+'</b><small>'+esc(prof.bio||me.email||'')+'</small></div><div class="ab"><button id="pe" type="button">Profile</button><button id="so" type="button">Sign out</button></div>';
+ $('so').onclick=()=>signOut(auth);$('pe').onclick=editProfile}
 function renderRooms(){
  $('rooms').innerHTML=rooms.map(r=>{const m=r.id===cur?msgs[msgs.length-1]:null;
   return '<button class="room'+(r.id===cur?' on':'')+'" data-id="'+r.id+'"><b><span>'+esc(r.name)+'</span><i>'+(m?hm(m.ts):'')+'</i></b><p>'+(m?esc((m.uid===me.uid?'':m.name+': ')+m.text):'Shared trace')+'</p></button>'}).join('')}
 const line=(m,n)=>{const mine=m.uid===me.uid;
- return '<div class="msg'+(mine?' me':'')+(n?' new':'')+'"><time>'+hm(m.ts)+'</time><span class="rule"></span><div class="body"><span class="who">'+esc(m.name||'Someone')+'</span>'+esc(m.text)+'</div></div>'};
+ return '<div class="msg'+(mine?' me':'')+(n?' new':'')+'"><time>'+hm(m.ts)+'</time><span class="rule"></span><div class="body"><span class="who" data-uid="'+esc(m.uid||'')+'" data-n="'+esc(m.name||'')+'">'+esc(m.name||'Someone')+'</span>'+esc(m.text)+'</div></div>'};
 function renderLog(){const r=rooms.find(x=>x.id===cur);if(!r)return;
  $('rt').textContent=r.name;$('rs').textContent='Shared with everyone signed in';
  let last='',h=msgs.length?'':'<div class="day">Empty page. Write the first line below.</div>';
@@ -68,8 +74,49 @@ $('back').addEventListener('click',()=>app.classList.remove('chatting'));
 $('nf').addEventListener('submit',e=>{e.preventDefault();const v=$('nr').value.trim();if(!v)return;$('nr').value='';
  addDoc(collection(db,'rooms'),{name:v.slice(0,30),ts:Date.now()}).then(r=>open(r.id))});
 
+/* ---------- profile ---------- */
+document.head.insertAdjacentHTML('beforeend','<style>#pm{position:fixed;inset:0;z-index:11;background:rgba(10,15,30,.6);display:none;align-items:center;justify-content:center;padding:20px}#pc{max-width:360px;width:100%;background:var(--paper2);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--margin);border-radius:4px;padding:24px;display:grid;gap:12px;max-height:100%;overflow:auto}#pc h3{margin:0;font-family:"Cormorant Garamond",Georgia,serif;font-size:28px}#pc label{display:grid;gap:4px;font-size:13px;color:var(--pencil)}.pav{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font-size:28px;font-weight:800;color:#fff;object-fit:cover}.pb{margin:0;line-height:1.5;color:var(--pencil)}.sws{display:flex;gap:10px;flex-wrap:wrap}.sw{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer}.sw.on{border-color:var(--ink)}.prow{display:flex;gap:10px}.prow .btn{flex:1}.who{cursor:pointer}.acct .ab{display:grid;gap:4px;flex:none}</style>');
+document.body.insertAdjacentHTML('beforeend','<div id="pm" role="dialog" aria-label="Profile"><div id="pc"></div></div>');
+const COLORS=['#2B4C9B','#C8473B','#2E7D5B','#8A5BB5','#C98A1B','#3B7F9E'];
+let prof={};
+const closePm=()=>{$('pm').style.display='none'};
+$('pm').addEventListener('click',e=>{if(e.target.id==='pm')closePm()});
+const avatar=p=>p.photoURL?'<img class="pav" alt="" referrerpolicy="no-referrer" src="'+esc(p.photoURL)+'">':'<span class="pav" style="background:'+esc(p.color||COLORS[0])+'">'+esc((p.name||'?').charAt(0).toUpperCase())+'</span>';
+async function loadProf(){
+ try{const r=doc(db,'users',me.uid),d=await getDoc(r);
+  if(d.exists())prof=d.data();
+  else{prof={name:me.displayName||(me.email||'').split('@')[0]||'Someone',bio:'',color:COLORS[0],photoURL:me.photoURL||''};await setDoc(r,prof)}
+ }catch(e){prof={}}
+ chip()}
+async function showCard(uid,fallback){
+ if(uid===me.uid)return editProfile();
+ $('pc').innerHTML='<p class="pb">Loading...</p>';$('pm').style.display='flex';
+ let p={};try{const d=await getDoc(doc(db,'users',uid));if(d.exists())p=d.data()}catch(e){}
+ p.name=p.name||fallback||'Someone';
+ $('pc').innerHTML=avatar(p)+'<h3>'+esc(p.name)+'</h3><p class="pb">'+(esc(p.bio||'')||'No status yet.')+'</p><button class="btn" id="pcl" type="button">Close</button>';
+ $('pcl').onclick=closePm}
+function editProfile(){
+ let col=prof.color||COLORS[0];const n=me.displayName||prof.name||'';
+ $('pc').innerHTML='<h3>Your profile</h3>'+avatar({name:n,color:col,photoURL:me.photoURL})
+  +'<label>Name<input id="pn" maxlength="30"></label><label>Status<input id="pbio" maxlength="80" placeholder="A few words about you"></label>'
+  +'<label>Colour (used when you have no photo)</label><div class="sws">'+COLORS.map(c=>'<button type="button" class="sw'+(c===col?' on':'')+'" data-c="'+c+'" style="background:'+c+'" aria-label="Colour"></button>').join('')+'</div>'
+  +'<small class="pb">'+esc(me.email||'')+'</small><div class="prow"><button class="btn" id="pcx" type="button">Cancel</button><button class="btn primary" id="psv" type="button">Save</button></div>';
+ $('pn').value=n;$('pbio').value=prof.bio||'';$('pm').style.display='flex';
+ $('pc').querySelector('.sws').onclick=e=>{const b=e.target.closest('.sw');if(!b)return;col=b.dataset.c;
+  $('pc').querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x===b));
+  const av=$('pc').querySelector('span.pav');if(av)av.style.background=col};
+ $('pcx').onclick=closePm;
+ $('psv').onclick=async()=>{const name=$('pn').value.trim()||n||'Someone',bio=$('pbio').value.trim().slice(0,80);
+  $('psv').disabled=true;
+  try{await updateProfile(auth.currentUser,{displayName:name});
+   prof={name,bio,color:col,photoURL:me.photoURL||''};
+   await setDoc(doc(db,'users',me.uid),prof);
+   me=auth.currentUser;chip();closePm();renderRooms();renderLog()}
+  catch(e){$('psv').disabled=false;alert('Could not save: '+(e.code||e.message))}}}
+log.addEventListener('click',e=>{const w=e.target.closest('.who');if(w&&w.dataset.uid)showCard(w.dataset.uid,w.dataset.n)});
+
 onAuthStateChanged(auth,u=>{
  unsubR&&unsubR();unsubM&&unsubM();
- if(u){me=u;gate.style.display='none';chip();start();
+ if(u){me=u;prof={};gate.style.display='none';chip();loadProf();start();
   if(matchMedia('(max-width:760px)').matches)app.classList.remove('chatting')}
  else{me=null;rooms=[];cur=null;gate.style.display='flex';$('gp').textContent='Sign in to join the conversation.'}});
