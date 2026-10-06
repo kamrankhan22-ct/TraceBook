@@ -41,7 +41,7 @@ $('gr').onclick=async()=>{const em=$('ge').value.trim();if(!em){err('Type your e
 
 /* ---------- chat ---------- */
 function chip(){const a=$('acct'),n=me.displayName||me.email||'You';
- a.innerHTML=(me.photoURL?'<img class="av" alt="" referrerpolicy="no-referrer" src="'+esc(me.photoURL)+'">':'<span class="av" style="background:'+esc(prof.color||'')+'">'+esc(n.charAt(0).toUpperCase())+'</span>')+'<div><b>'+esc(n)+'</b><small>'+esc(prof.bio||me.email||'')+'</small></div><div class="ab"><button id="pe" type="button">Profile</button><button id="so" type="button">Sign out</button></div>';
+ a.innerHTML=(me.photoURL?'<img class="av" alt="" referrerpolicy="no-referrer" src="'+esc(me.photoURL)+'">':'<span class="av" style="background:'+esc(prof.color||'')+'">'+esc(n.charAt(0).toUpperCase())+'</span>')+'<div><b>'+esc(n)+'</b><small>'+esc((prof.mood?prof.mood+' ':'')+(prof.bio||me.email||''))+'</small></div><div class="ab"><button id="pe" type="button">Profile</button><button id="so" type="button">Sign out</button></div>';
  $('so').onclick=()=>signOut(auth);$('pe').onclick=editProfile}
 function renderRooms(){
  $('rooms').innerHTML=rooms.map(r=>{const m=r.id===cur?msgs[msgs.length-1]:null;
@@ -75,17 +75,19 @@ $('nf').addEventListener('submit',e=>{e.preventDefault();const v=$('nr').value.t
  addDoc(collection(db,'rooms'),{name:v.slice(0,30),ts:Date.now()}).then(r=>open(r.id))});
 
 /* ---------- profile ---------- */
-document.head.insertAdjacentHTML('beforeend','<style>#pm{position:fixed;inset:0;z-index:11;background:rgba(10,15,30,.6);display:none;align-items:center;justify-content:center;padding:20px}#pc{max-width:360px;width:100%;background:var(--paper2);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--margin);border-radius:4px;padding:24px;display:grid;gap:12px;max-height:100%;overflow:auto}#pc h3{margin:0;font-family:"Cormorant Garamond",Georgia,serif;font-size:28px}#pc label{display:grid;gap:4px;font-size:13px;color:var(--pencil)}.pav{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font-size:28px;font-weight:800;color:#fff;object-fit:cover}.pb{margin:0;line-height:1.5;color:var(--pencil)}.sws{display:flex;gap:10px;flex-wrap:wrap}.sw{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer}.sw.on{border-color:var(--ink)}.prow{display:flex;gap:10px}.prow .btn{flex:1}.who{cursor:pointer}.acct .ab{display:grid;gap:4px;flex:none}</style>');
+document.head.insertAdjacentHTML('beforeend','<style>#pm{position:fixed;inset:0;z-index:11;background:rgba(10,15,30,.6);display:none;align-items:center;justify-content:center;padding:20px}#pc{max-width:360px;width:100%;background:var(--paper2);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--margin);border-radius:4px;padding:24px;display:grid;gap:12px;max-height:100%;overflow:auto}#pc h3{margin:0;font-family:"Cormorant Garamond",Georgia,serif;font-size:28px}#pc label{display:grid;gap:4px;font-size:13px;color:var(--pencil)}.pav{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font-size:28px;font-weight:800;color:#fff;object-fit:cover}.pb{margin:0;line-height:1.5;color:var(--pencil)}.sws{display:flex;gap:10px;flex-wrap:wrap}.sw{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer}.sw.on{border-color:var(--ink)}.prow{display:flex;gap:10px}.prow .btn{flex:1}.who{cursor:pointer}.acct .ab{display:grid;gap:4px;flex:none}.tg{display:flex;gap:6px;flex-wrap:wrap}.tg span{border:1px solid var(--line);border-radius:99px;padding:2px 10px;font-size:13px}.em{display:flex;gap:6px;flex-wrap:wrap}.em button{font-size:20px;border:2px solid transparent;background:var(--paper);border-radius:6px;padding:2px 6px;cursor:pointer}.em button.on{border-color:var(--ink)}#pc a{color:var(--me)}</style>');
 document.body.insertAdjacentHTML('beforeend','<div id="pm" role="dialog" aria-label="Profile"><div id="pc"></div></div>');
 const COLORS=['#2B4C9B','#C8473B','#2E7D5B','#8A5BB5','#C98A1B','#3B7F9E'];
 let prof={};
 const closePm=()=>{$('pm').style.display='none'};
 $('pm').addEventListener('click',e=>{if(e.target.id==='pm')closePm()});
 const avatar=p=>p.photoURL?'<img class="pav" alt="" referrerpolicy="no-referrer" src="'+esc(p.photoURL)+'">':'<span class="pav" style="background:'+esc(p.color||COLORS[0])+'">'+esc((p.name||'?').charAt(0).toUpperCase())+'</span>';
+const MOODS=['😀','😎','📚','☕','🎧','🌙','🔥','🌱'];
+const safeLink=u=>/^https:\/\/[^\s"'<>]+$/i.test(u||'')?u:'';
 async function loadProf(){
  try{const r=doc(db,'users',me.uid),d=await getDoc(r);
   if(d.exists())prof=d.data();
-  else{prof={name:me.displayName||(me.email||'').split('@')[0]||'Someone',bio:'',color:COLORS[0],photoURL:me.photoURL||''};await setDoc(r,prof)}
+  else{prof={name:me.displayName||(me.email||'').split('@')[0]||'Someone',bio:'',color:COLORS[0],photoURL:me.photoURL||'',mood:'',pronouns:'',city:'',link:'',tags:'',joined:Date.now()};await setDoc(r,prof)}
  }catch(e){prof={}}
  chip()}
 async function showCard(uid,fallback){
@@ -93,23 +95,46 @@ async function showCard(uid,fallback){
  $('pc').innerHTML='<p class="pb">Loading...</p>';$('pm').style.display='flex';
  let p={};try{const d=await getDoc(doc(db,'users',uid));if(d.exists())p=d.data()}catch(e){}
  p.name=p.name||fallback||'Someone';
- $('pc').innerHTML=avatar(p)+'<h3>'+esc(p.name)+'</h3><p class="pb">'+(esc(p.bio||'')||'No status yet.')+'</p><button class="btn" id="pcl" type="button">Close</button>';
+ const tags=(p.tags||'').split(',').map(x=>x.trim()).filter(Boolean),link=safeLink(p.link);
+ $('pc').innerHTML=avatar(p)+'<h3>'+esc(p.name)+(p.mood?' '+esc(p.mood):'')+'</h3>'
+  +(p.pronouns?'<small class="pb">'+esc(p.pronouns)+'</small>':'')
+  +'<p class="pb">'+(esc(p.bio||'')||'No status yet.')+'</p>'
+  +(p.city?'<p class="pb">\u{1F4CD} '+esc(p.city)+'</p>':'')
+  +(tags.length?'<div class="tg">'+tags.map(x=>'<span>'+esc(x)+'</span>').join('')+'</div>':'')
+  +(link?'<p class="pb"><a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(link.replace(/^https:\/\//i,''))+'</a></p>':'')
+  +(p.joined?'<small class="pb">Joined '+new Date(p.joined).toLocaleDateString([],{month:'long',year:'numeric'})+'</small>':'')
+  +'<button class="btn" id="pcl" type="button">Close</button>';
  $('pcl').onclick=closePm}
 function editProfile(){
- let col=prof.color||COLORS[0];const n=me.displayName||prof.name||'';
+ let col=prof.color||COLORS[0],mood=prof.mood||'';const n=me.displayName||prof.name||'';
  $('pc').innerHTML='<h3>Your profile</h3>'+avatar({name:n,color:col,photoURL:me.photoURL})
-  +'<label>Name<input id="pn" maxlength="30"></label><label>Status<input id="pbio" maxlength="80" placeholder="A few words about you"></label>'
+  +'<label>Name<input id="pn" maxlength="30"></label>'
+  +'<label>Status<input id="pbio" maxlength="80" placeholder="A few words about you"></label>'
+  +'<label>Mood</label><div class="em">'+MOODS.map(m=>'<button type="button" data-m="'+m+'"'+(m===mood?' class="on"':'')+'>'+m+'</button>').join('')+'</div>'
+  +'<label>Pronouns<input id="ppr" maxlength="20" placeholder="she/her, he/him, they/them"></label>'
+  +'<label>City<input id="pci" maxlength="30" placeholder="Where you are"></label>'
+  +'<label>Interests (up to 3, separated by commas)<input id="ptg" maxlength="60" placeholder="music, books, cricket"></label>'
+  +'<label>Link (starts with https://)<input id="pli" maxlength="100" placeholder="https://"></label>'
   +'<label>Colour (used when you have no photo)</label><div class="sws">'+COLORS.map(c=>'<button type="button" class="sw'+(c===col?' on':'')+'" data-c="'+c+'" style="background:'+c+'" aria-label="Colour"></button>').join('')+'</div>'
   +'<small class="pb">'+esc(me.email||'')+'</small><div class="prow"><button class="btn" id="pcx" type="button">Cancel</button><button class="btn primary" id="psv" type="button">Save</button></div>';
- $('pn').value=n;$('pbio').value=prof.bio||'';$('pm').style.display='flex';
+ $('pn').value=n;$('pbio').value=prof.bio||'';$('ppr').value=prof.pronouns||'';$('pci').value=prof.city||'';$('ptg').value=prof.tags||'';$('pli').value=prof.link||'';
+ $('pm').style.display='flex';
  $('pc').querySelector('.sws').onclick=e=>{const b=e.target.closest('.sw');if(!b)return;col=b.dataset.c;
   $('pc').querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x===b));
   const av=$('pc').querySelector('span.pav');if(av)av.style.background=col};
+ $('pc').querySelector('.em').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+  mood=mood===b.dataset.m?'':b.dataset.m;
+  $('pc').querySelectorAll('.em button').forEach(x=>x.classList.toggle('on',x.dataset.m===mood))};
  $('pcx').onclick=closePm;
- $('psv').onclick=async()=>{const name=$('pn').value.trim()||n||'Someone',bio=$('pbio').value.trim().slice(0,80);
+ $('psv').onclick=async()=>{
+  const name=$('pn').value.trim()||n||'Someone',bio=$('pbio').value.trim().slice(0,80),
+   pronouns=$('ppr').value.trim().slice(0,20),city=$('pci').value.trim().slice(0,30),
+   tags=$('ptg').value.split(',').map(x=>x.trim()).filter(Boolean).slice(0,3).join(', ').slice(0,60),
+   link=$('pli').value.trim();
+  if(link&&!safeLink(link)){alert('The link must start with https:// and have no spaces.');return}
   $('psv').disabled=true;
   try{await updateProfile(auth.currentUser,{displayName:name});
-   prof={name,bio,color:col,photoURL:me.photoURL||''};
+   prof={name,bio,color:col,photoURL:me.photoURL||'',mood,pronouns,city,link,tags,joined:prof.joined||Date.now()};
    await setDoc(doc(db,'users',me.uid),prof);
    me=auth.currentUser;chip();closePm();renderRooms();renderLog()}
   catch(e){$('psv').disabled=false;alert('Could not save: '+(e.code||e.message))}}}
