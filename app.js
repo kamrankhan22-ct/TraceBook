@@ -1,5 +1,5 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import {getAuth,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {getAuth,onAuthStateChanged,signInWithPopup,signInWithRedirect,getRedirectResult,getAdditionalUserInfo,GoogleAuthProvider,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {getFirestore,collection,addDoc,onSnapshot,query,orderBy,limit,doc,getDoc,setDoc,deleteDoc} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
 
@@ -23,9 +23,18 @@ const friendly=e=>({
  'auth/invalid-credential':'Email or password is wrong.','auth/wrong-password':'Email or password is wrong.',
  'auth/user-not-found':'No account with that email. Choose Create an account.','auth/email-already-in-use':'That email already has an account. Sign in instead.',
  'auth/weak-password':'Use a password with at least 6 characters.','auth/popup-closed-by-user':'Google sign-in was closed before it finished.',
- 'auth/unauthorized-domain':'Add this site to Authentication > Settings > Authorized domains in Firebase.','auth/invalid-email':'Enter a valid email address.'
+ 'auth/unauthorized-domain':'Add this site to Authentication > Settings > Authorized domains in Firebase.','auth/invalid-email':'Enter a valid email address.','auth/account-exists-with-different-credential':'This email is already registered another way. Sign in with your email and password instead.'
 }[e.code]||'Something went wrong ('+(e.code||'unknown')+').');
-$('gg').onclick=()=>{err();signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>err(friendly(e)))};
+document.head.insertAdjacentHTML('beforeend','<style>#gg{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#1f1f1f;border-color:#dadce0}#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:12px 18px;border-radius:4px;z-index:20;max-width:90%;text-align:center}</style>');
+function toast(m){const d=document.createElement('div');d.id='toast';d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),5000)}
+const gprov=new GoogleAuthProvider();gprov.setCustomParameters({prompt:'select_account'});
+$('gg').innerHTML='<svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.5l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.6 5.9c4.4-4.1 7-10.1 7-17.6z"/><path fill="#FBBC05" d="M10.5 28.7A14.5 14.5 0 0 1 9.5 24c0-1.6.3-3.2.8-4.7l-7.9-6.1A24 24 0 0 0 0 24c0 3.9.9 7.5 2.6 10.8l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.6-5.9c-2.1 1.4-4.9 2.3-8.3 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg><span>Continue with Google</span>';
+$('gg').insertAdjacentHTML('afterend','<small style="text-align:center;color:var(--pencil);font-size:13px">New or returning: Google creates your account from your email automatically.</small>');
+function handleNew(r){const i=getAdditionalUserInfo(r);if(i&&i.isNewUser)toast('Account created with '+(r.user.email||'Google')+'. Welcome!')}
+$('gg').onclick=async()=>{err();
+ try{handleNew(await signInWithPopup(auth,gprov))}
+ catch(e){if(e.code==='auth/cancelled-popup-request')return;if(e.code==='auth/popup-blocked'){signInWithRedirect(auth,gprov);return}err(friendly(e))}};
+getRedirectResult(auth).then(r=>{if(r)handleNew(r)}).catch(e=>err(friendly(e)));
 $('gm').onclick=()=>{creating=!creating;err();
  $('gn').style.display=creating?'':'none';$('gn').required=creating;
  $('gs').textContent=creating?'Create account':'Sign in with email';
