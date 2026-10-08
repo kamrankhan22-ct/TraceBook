@@ -15,7 +15,7 @@ if(!firebaseConfig.apiKey||firebaseConfig.apiKey.startsWith('YOUR_')){
  $('gb').style.display='none';throw new Error('Missing Firebase config');
 }
 const fb=initializeApp(firebaseConfig),auth=getAuth(fb),db=getFirestore(fb);
-let me=null,rooms=[],cur=null,msgs=[],unsubR=null,unsubM=null,creating=false,dms=[],curKind='room',unsubD=null,unsubO=null;
+let me=null,rooms=[],cur=null,msgs=[],unsubR=null,unsubM=null,creating=false,dms=[],curKind='room',unsubD=null,unsubO=null,unsubB=null,blocked=new Set();
 const mcol=(id,k)=>collection(db,k==='dm'?'dms':'rooms',id,'messages');
 
 /* ---------- sign in ---------- */
@@ -53,19 +53,20 @@ $('gr').onclick=async()=>{const em=$('ge').value.trim();if(!em){err('Type your e
 function chip(){const a=$('acct'),n=me.displayName||me.email||'You';
  a.innerHTML=((prof.pic||me.photoURL)?'<img class="av" alt="" referrerpolicy="no-referrer" src="'+esc(prof.pic||me.photoURL)+'">':'<span class="av" style="background:'+esc(prof.color||'')+'">'+esc(n.charAt(0).toUpperCase())+'</span>')+'<div><b>'+esc(n)+'</b><small>'+esc((prof.mood?prof.mood+' ':'')+(prof.bio||me.email||''))+'</small></div><div class="ab"><button id="pe" type="button">Profile</button><button id="so" type="button">Sign out</button></div>';
  $('so').onclick=async()=>{try{await setDoc(doc(db,'users',me.uid),{lastSeen:0},{merge:true})}catch(e){}signOut(auth)};$('pe').onclick=editProfile}
+const shown=()=>msgs.filter(m=>!blocked.has(m.uid));
 function renderRooms(){
- const item=(r,k)=>{const on=r.id===cur&&curKind===k,m=on?msgs[msgs.length-1]:null;
+ const item=(r,k)=>{const on=r.id===cur&&curKind===k,m=on?shown().slice(-1)[0]:null;
   return '<button class="room'+(on?' on':'')+'" data-id="'+r.id+'" data-k="'+k+'"><b><span>'+(k==='dm'?'\u{1F512} ':'')+esc(r.name)+(k==='dm'&&isOn(r.other)?'<span class="dot-on"></span>':'')+'</span><i>'+(m?hm(m.ts):'')+'</i></b><p>'+(m?esc((m.uid===me.uid?'':m.name+': ')+m.text):(k==='dm'?'Private chat':'Shared trace'))+'</p></button>'};
- $('rooms').innerHTML=rooms.map(r=>item(r,'room')).join('')+'<div class="sec">Private chats<button id="np" type="button">+ New</button></div>'+(dms.length?dms.map(r=>item(r,'dm')).join(''):'<p class="pb" style="padding:4px 20px">No private chats yet.</p>')
-  +(()=>{const o=Object.keys(seen).filter(u=>u!==me.uid&&isOn(u));
+ $('rooms').innerHTML=rooms.map(r=>item(r,'room')).join('')+'<div class="sec">Private chats<button id="np" type="button">+ New</button></div>'+(dms.filter(d=>!blocked.has(d.other)).length?dms.filter(d=>!blocked.has(d.other)).map(r=>item(r,'dm')).join(''):'<p class="pb" style="padding:4px 20px">No private chats yet.</p>')
+  +(()=>{const o=Object.keys(seen).filter(u=>u!==me.uid&&isOn(u)&&!blocked.has(u));
    return '<div class="sec">Online now ('+o.length+')</div>'+(o.length?o.map(u=>'<button class="room onl" data-u="'+esc(u)+'"><span class="dot-on" style="margin:0 8px 0 0"></span>'+esc((pcache[u]||{}).name||'Someone')+'</button>').join(''):'<p class="pb" style="padding:4px 20px">No one else right now.</p>')})()}
 const line=(m,n)=>{const mine=m.uid===me.uid;
  return '<div class="msg'+(mine?' me':'')+(n?' new':'')+'"><time>'+hm(m.ts)+'</time><span class="rule"></span><div class="body">'+mav(m)+'<span class="who" data-uid="'+esc(m.uid||'')+'" data-n="'+esc(m.name||'')+'">'+esc(m.name||'Someone')+'</span>'+esc(m.text)+(mine&&m.id?'<button class="del" data-id="'+esc(m.id)+'" aria-label="Delete message" title="Delete">\u00d7</button>':'')+'</div></div>'};
 function renderLog(){const r=(curKind==='dm'?dms:rooms).find(x=>x.id===cur);if(!r)return;
- $('dt').hidden=!(curKind==='room'&&r.by&&me&&r.by===me.uid);
+ $('dt').hidden=curKind==='dm'?false:!(r.by&&me&&r.by===me.uid);$('dt').textContent=curKind==='dm'?'Delete chat':'Delete trace';
  $('rt').textContent=(curKind==='dm'?'\u{1F512} ':'')+r.name;$('rs').textContent=curKind==='dm'?'Private. Only you two can see this.':'Shared with everyone signed in';
- let last='',h=msgs.length?'':'<div class="day">Empty page. Write the first line below.</div>';
- msgs.forEach(m=>{const d=dayLabel(m.ts);if(d!==last){h+='<div class="day">'+d+'</div>';last=d}h+=line(m)});
+ const vis=shown();let last='',h=vis.length?'':'<div class="day">Empty page. Write the first line below.</div>';
+ vis.forEach(m=>{const d=dayLabel(m.ts);if(d!==last){h+='<div class="day">'+d+'</div>';last=d}h+=line(m)});
  const atBottom=log.scrollHeight-log.scrollTop-log.clientHeight<80;
  log.innerHTML=h;if(atBottom)log.scrollTop=log.scrollHeight}
 function open(id,k='room'){cur=id;curKind=k;msgs=[];renderRooms();renderLog();app.classList.add('chatting');
@@ -75,7 +76,10 @@ function open(id,k='room'){cur=id;curKind=k;msgs=[];renderRooms();renderLog();ap
 function start(){
  unsubD=onSnapshot(query(collection(db,'dms'),where('members','array-contains',me.uid)),snap=>{
   dms=snap.docs.map(d=>{const m=d.data(),o=(m.members||[]).find(x=>x!==me.uid);return{id:d.id,other:o,name:(m.names&&m.names[o])||'Someone'}});
+  if(curKind==='dm'&&!dms.some(x=>x.id===cur)&&rooms[0]){open(rooms[0].id);return}
   renderRooms();if(curKind==='dm')renderLog()},()=>{});
+ unsubB=onSnapshot(query(collection(db,'blocks'),where('by','==',me.uid)),snap=>{
+  blocked=new Set(snap.docs.map(d=>d.data().target));renderRooms();renderLog()},()=>{});
  unsubO=onSnapshot(query(collection(db,'users'),orderBy('lastSeen','desc'),limit(30)),snap=>{
   snap.docs.forEach(d=>{const x=d.data();seen[d.id]=x.lastSeen||0;pcache[d.id]=x;asked.add(d.id)});
   renderRooms();renderLog()},()=>{});
@@ -84,7 +88,7 @@ function start(){
   rooms=snap.docs.map(d=>({id:d.id,name:d.data().name,by:d.data().by||''}));
   if(curKind==='room'&&!rooms.some(r=>r.id===cur))open(rooms[0].id);else{renderRooms();renderLog()}},()=>{$('rs').textContent='Cannot load traces. Check your Firestore rules.'})}
 function send(){const v=t.value.trim();if(!v||!cur)return;
- addDoc(mcol(cur,curKind),{uid:me.uid,name:me.displayName||me.email||'Someone',text:v,ts:Date.now()});
+ addDoc(mcol(cur,curKind),{uid:me.uid,name:me.displayName||me.email||'Someone',text:v,ts:Date.now()}).catch(()=>toast('Message could not be sent.'));
  t.value='';grow();s.disabled=true}
 function grow(){t.style.height='auto';t.style.height=Math.min(t.scrollHeight,140)+'px'}
 t.addEventListener('input',()=>{s.disabled=!t.value.trim();grow()});
@@ -95,7 +99,15 @@ $('back').addEventListener('click',()=>app.classList.remove('chatting'));
 $('nf').addEventListener('submit',e=>{e.preventDefault();const v=$('nr').value.trim();if(!v)return;$('nr').value='';
  addDoc(collection(db,'rooms'),{name:v.slice(0,30),ts:Date.now(),by:me.uid}).then(r=>open(r.id))});
 document.querySelector('header.top').insertAdjacentHTML('beforeend','<button id="dt" type="button" hidden>Delete trace</button>');
-$('dt').onclick=async()=>{const r=rooms.find(x=>x.id===cur);if(curKind!=='room'||!r||r.by!==me.uid)return;
+$('dt').onclick=async()=>{
+ if(curKind==='dm'){const id=cur;if(!confirm('Delete this private chat and all its messages for both of you? This cannot be undone.'))return;
+  $('dt').disabled=true;
+  try{const snap=await getDocs(mcol(id,'dm'));
+   for(let i=0;i<snap.docs.length;i+=400){const b=writeBatch(db);snap.docs.slice(i,i+400).forEach(d=>b.delete(d.ref));await b.commit()}
+   await deleteDoc(doc(db,'dms',id));curKind='room';if(rooms[0])open(rooms[0].id)}
+  catch(e){alert('Could not delete: '+(e.code||e.message))}
+  $('dt').disabled=false;return}
+ const r=rooms.find(x=>x.id===cur);if(curKind!=='room'||!r||r.by!==me.uid)return;
  if(!confirm('Delete the trace "'+r.name+'" and all its messages? This cannot be undone.'))return;
  $('dt').disabled=true;
  try{const snap=await getDocs(collection(db,'rooms',r.id,'messages'));
@@ -148,8 +160,14 @@ async function showCard(uid,fallback){
   +(link?'<p class="pb"><a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(link.replace(/^https:\/\//i,''))+'</a></p>':'')
   +(isOn(uid)?'<small class="pb" style="color:#2E9E5B">Online now</small>':(p.lastSeen>0?'<small class="pb">Last seen '+ago(p.lastSeen)+'</small>':''))
   +(p.joined?'<small class="pb">Joined '+new Date(p.joined).toLocaleDateString([],{month:'long',year:'numeric'})+'</small>':'')
-  +'<button class="btn" id="pcl" type="button">Close</button>';
- $('pcl').onclick=closePm}
+  +'<div class="prow"><button class="btn" id="pbk" type="button">'+(blocked.has(uid)?'Unblock':'Block')+'</button><button class="btn" id="pcl" type="button">Close</button></div>';
+ $('pcl').onclick=closePm;
+ $('pbk').onclick=async()=>{try{
+  if(blocked.has(uid)){await deleteDoc(doc(db,'blocks',me.uid+'_'+uid))}
+  else{if(!confirm('Block '+p.name+'? You will not see their messages, and they cannot send you private messages.'))return;
+   await setDoc(doc(db,'blocks',me.uid+'_'+uid),{by:me.uid,target:uid,ts:Date.now()});
+   if(curKind==='dm'&&(dms.find(x=>x.id===cur)||{}).other===uid&&rooms[0])open(rooms[0].id)}
+  closePm()}catch(e){alert('Could not update: '+(e.code||e.message))}}}
 function editProfile(){
  let col=prof.color||COLORS[0],mood=prof.mood||'',pic=prof.pic||'';const n=me.displayName||prof.name||'';
  $('pc').innerHTML='<h3>Your profile</h3><div id="pvw"></div><div class="prow"><button class="btn" id="pup" type="button">Choose photo</button><button class="btn" id="prm" type="button">Remove</button></div><input id="pfile" type="file" accept="image/*" hidden>'
@@ -198,10 +216,10 @@ async function openPeople(){
  $('pm').style.display='flex';$('ppx').onclick=closePm;
  let all=[];
  try{const snap=await getDocs(query(collection(db,'users'),limit(200)));all=snap.docs.map(d=>({uid:d.id,...d.data()})).filter(u=>u.uid!==me.uid)}catch(e){}
- const draw=()=>{const q=$('pq').value.trim().toLowerCase(),l=all.filter(u=>!q||(u.name||'').toLowerCase().includes(q));
-  $('pl').innerHTML=l.length?l.map(u=>'<button class="pr" type="button" data-u="'+esc(u.uid)+'" data-n="'+esc(u.name||'Someone')+'">'+avatar(u).replace('class="pav"','class="pav sm"')+'<span><b>'+esc(u.name||'Someone')+'</b><small>'+esc(u.bio||'')+'</small></span></button>').join(''):'<p class="pb">No one found yet. People show up here after they open TraceBook once.</p>'};
+ const draw=()=>{const q=$('pq').value.trim().toLowerCase(),l=all.filter(u=>!blocked.has(u.uid)&&(!q||(u.name||'').toLowerCase().includes(q))),bl=all.filter(u=>blocked.has(u.uid));
+  $('pl').innerHTML=(l.length?l.map(u=>'<button class="pr" type="button" data-u="'+esc(u.uid)+'" data-n="'+esc(u.name||'Someone')+'">'+avatar(u).replace('class="pav"','class="pav sm"')+'<span><b>'+esc(u.name||'Someone')+'</b><small>'+esc(u.bio||'')+'</small></span></button>').join(''):'<p class="pb">No one found yet. People show up here after they open TraceBook once.</p>')+(bl.length?'<p class="pb" style="padding-top:12px"><b>Blocked</b></p>'+bl.map(u=>'<div class="pr"><span style="flex:1"><b>'+esc(u.name||'Someone')+'</b></span><button class="btn ub" type="button" data-u="'+esc(u.uid)+'">Unblock</button></div>').join(''):'')};
  draw();$('pq').oninput=draw;
- $('pl').onclick=e=>{const b=e.target.closest('.pr');if(b)startDm(b.dataset.u,b.dataset.n)}}
+ $('pl').onclick=async e=>{const ub=e.target.closest('.ub');if(ub){try{await deleteDoc(doc(db,'blocks',me.uid+'_'+ub.dataset.u));setTimeout(draw,300)}catch(x){alert('Could not unblock: '+(x.code||x.message))}return}const b=e.target.closest('.pr[data-u]');if(b)startDm(b.dataset.u,b.dataset.n)}}
 async function startDm(uid,name){
  const id=[me.uid,uid].sort().join('_'),r=doc(db,'dms',id);
  try{const d=await getDoc(r);
@@ -213,7 +231,7 @@ log.addEventListener('click',e=>{const x=e.target.closest('.del');
  const w=e.target.closest('.who');if(w&&w.dataset.uid)showCard(w.dataset.uid,w.dataset.n)});
 
 onAuthStateChanged(auth,u=>{
- unsubR&&unsubR();unsubM&&unsubM();unsubD&&unsubD();unsubO&&unsubO();dms=[];curKind='room';
+ unsubR&&unsubR();unsubM&&unsubM();unsubD&&unsubD();unsubO&&unsubO();unsubB&&unsubB();blocked=new Set();dms=[];curKind='room';
  if(u){me=u;prof={};gate.style.display='none';chip();loadProf();start();
   if(matchMedia('(max-width:760px)').matches)app.classList.remove('chatting')}
  else{me=null;rooms=[];cur=null;gate.style.display='flex';$('gp').textContent='Sign in to join the conversation.'}});
