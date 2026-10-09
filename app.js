@@ -21,6 +21,44 @@ const rdoc=id=>doc(rcol(),id);
 const mcol=(id,k)=>k==='dm'?collection(db,'dms',id,'messages'):collection(rdoc(id),'messages');
 const wsInfo=()=>myWs.find(w=>w.id===ws);
 const canDelRoom=r=>!!r&&((!!r.by&&r.by===me.uid)||(!!ws&&(wsInfo()||{}).owner===me.uid));
+/* ---------- settings ---------- */
+let prefs={theme:'system',size:'m',enter:true};
+try{prefs={...prefs,...JSON.parse(localStorage.getItem('tb.prefs')||'{}')}}catch(e){}
+function applyPrefs(){const r=document.documentElement;
+ if(prefs.theme==='system')r.removeAttribute('data-theme');else r.setAttribute('data-theme',prefs.theme);
+ r.style.setProperty('--mfs',({s:'16px',m:'18px',l:'21px'})[prefs.size]||'18px')}
+function savePrefs(){try{localStorage.setItem('tb.prefs',JSON.stringify(prefs))}catch(e){}applyPrefs()}
+document.head.insertAdjacentHTML('beforeend','<style>:root[data-theme="light"]{--paper:#EEF1EF;--paper2:#E2E8E6;--ink:#17233F;--pencil:#6A778C;--margin:#C8473B;--line:#C9D3D6;--me:#2B4C9B}:root[data-theme="dark"]{--paper:#141B2B;--paper2:#1B2438;--ink:#E7ECF4;--pencil:#8E9BB3;--margin:#E26A5D;--line:#26314A;--me:#8FB0FF}.msg .body{font-size:var(--mfs,18px)!important}.seg{display:flex;gap:6px}.seg button{flex:1;border:1px solid var(--line);background:var(--paper);color:inherit;border-radius:4px;font:inherit;padding:8px;cursor:pointer}.seg button.on{border-color:var(--ink);background:var(--ink);color:var(--paper)}#pc h4{margin:8px 0 0;font:800 12px var(--ui);color:var(--pencil);letter-spacing:.06em;text-transform:uppercase}#pc label.chk{display:flex;gap:8px;align-items:flex-start;color:var(--ink);font-size:14px}#pc label.chk input{width:auto;margin-top:3px}</style>');
+applyPrefs();
+async function openSettings(){
+ const notif=!('Notification' in window)?'Not supported on this browser':Notification.permission==='granted'?'On':Notification.permission==='denied'?'Blocked in browser settings':'Off';
+ const seg=(key,opts)=>'<div class="seg" data-k="'+key+'">'+opts.map(o=>'<button type="button" data-v="'+o[0]+'"'+(String(prefs[key])===o[0]?' class="on"':'')+'>'+o[1]+'</button>').join('')+'</div>';
+ $('pc').innerHTML='<h3>Settings</h3>'
+  +'<h4>Appearance</h4><label>Theme</label>'+seg('theme',[['system','Auto'],['light','Light'],['dark','Dark']])
+  +'<label>Message text size</label>'+seg('size',[['s','Small'],['m','Medium'],['l','Large']])
+  +'<h4>Chat</h4><label class="chk"><input type="checkbox" id="sen"> Press Enter to send (Shift+Enter makes a new line)</label>'
+  +'<h4>Notifications</h4><p class="pb">Browser notifications: <b id="snt">'+esc(notif)+'</b></p><button class="btn" id="snb" type="button"'+(notif==='Off'?'':' hidden')+'>Turn on notifications</button>'
+  +'<h4>Privacy</h4><label class="chk"><input type="checkbox" id="shd"> Hide my online status</label><p class="pb"><b>Blocked people</b></p><div id="sbl" class="pb">Loading...</div>'
+  +'<h4>Account</h4><p class="pb">'+esc(me.email||'')+'</p><button class="btn" id="ssh" type="button">Edit profile</button><button class="btn" id="sso" type="button" style="color:var(--margin)">Sign out</button><button class="btn" id="sx" type="button">Close</button>';
+ $('pm').style.display='flex';$('sx').onclick=closePm;
+ $('pc').querySelectorAll('.seg').forEach(g=>{g.onclick=e=>{const b=e.target.closest('button');if(!b)return;
+  prefs[g.dataset.k]=b.dataset.v;savePrefs();g.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))}});
+ $('sen').checked=prefs.enter!==false;$('sen').onchange=()=>{prefs.enter=$('sen').checked;savePrefs()};
+ $('snb').onclick=async()=>{try{await Notification.requestPermission()}catch(e){}
+  $('snt').textContent=Notification.permission==='granted'?'On':'Blocked in browser settings';$('snb').hidden=true;if($('nt'))$('nt').hidden=true};
+ $('shd').checked=!!prof.hideOnline;
+ $('shd').onchange=()=>{prof.hideOnline=$('shd').checked;pcache[me.uid]=prof;
+  setDoc(doc(db,'users',me.uid),{hideOnline:prof.hideOnline},{merge:true}).then(beat).catch(()=>toast('Could not save that setting.'))};
+ $('ssh').onclick=()=>{closePm();editProfile()};
+ $('sso').onclick=()=>{closePm();doSignOut()};
+ const drawBlocked=async()=>{const el=$('sbl');if(!el)return;const ids=[...blocked];
+  if(!ids.length){el.textContent='No one is blocked.';return}
+  await Promise.all(ids.map(async u=>{if(!pcache[u]){try{const d=await getDoc(doc(db,'users',u));pcache[u]=d.exists()?d.data():{}}catch(e){pcache[u]={}}}}));
+  const el2=$('sbl');if(!el2)return;
+  el2.innerHTML=ids.map(u=>'<div class="prow" style="align-items:center;margin:4px 0"><span style="flex:1">'+esc((pcache[u]||{}).name||'Someone')+'</span><button class="btn ub" data-u="'+esc(u)+'" type="button" style="flex:none">Unblock</button></div>').join('')};
+ drawBlocked();
+ $('sbl').onclick=async e=>{const b=e.target.closest('.ub');if(!b)return;
+  try{await deleteDoc(doc(db,'blocks',me.uid+'_'+b.dataset.u));setTimeout(drawBlocked,400)}catch(x){alert('Could not unblock: '+(x.code||x.message))}}}
 
 /* ---------- sign in ---------- */
 const err=m=>{$('ger').textContent=m||''};
@@ -55,8 +93,9 @@ $('gr').onclick=async()=>{const em=$('ge').value.trim();if(!em){err('Type your e
 
 /* ---------- chat ---------- */
 function chip(){const a=$('acct'),n=me.displayName||me.email||'You';
- a.innerHTML=((prof.pic||me.photoURL)?'<img class="av" alt="" referrerpolicy="no-referrer" src="'+esc(prof.pic||me.photoURL)+'">':'<span class="av" style="background:'+esc(prof.color||'')+'">'+esc(n.charAt(0).toUpperCase())+'</span>')+'<div><b>'+esc(n)+'</b><small>'+esc((prof.mood?prof.mood+' ':'')+(prof.bio||me.email||''))+'</small></div><div class="ab"><button id="pe" type="button">Profile</button><button id="so" type="button">Sign out</button></div>';
- $('so').onclick=async()=>{try{await setDoc(doc(db,'users',me.uid),{lastSeen:0},{merge:true})}catch(e){}signOut(auth)};$('pe').onclick=editProfile}
+ a.innerHTML=((prof.pic||me.photoURL)?'<img class="av" alt="" referrerpolicy="no-referrer" src="'+esc(prof.pic||me.photoURL)+'">':'<span class="av" style="background:'+esc(prof.color||'')+'">'+esc(n.charAt(0).toUpperCase())+'</span>')+'<div><b>'+esc(n)+'</b><small>'+esc((prof.mood?prof.mood+' ':'')+(prof.bio||me.email||''))+'</small></div><div class="ab"><button id="pe" type="button">Profile</button><button id="se" type="button">Settings</button></div>';
+ $('se').onclick=openSettings;$('pe').onclick=editProfile}
+async function doSignOut(){try{await setDoc(doc(db,'users',me.uid),{lastSeen:0},{merge:true})}catch(e){}signOut(auth)}
 const shown=()=>msgs.filter(m=>!blocked.has(m.uid));
 function renderRooms(){
  const item=(r,k)=>{const on=r.id===cur&&curKind===k,m=on?shown().slice(-1)[0]:null;
@@ -169,7 +208,7 @@ function send(){const v=t.value.trim();if(!v||!cur)return;
  t.value='';grow();s.disabled=true}
 function grow(){t.style.height='auto';t.style.height=Math.min(t.scrollHeight,140)+'px'}
 t.addEventListener('input',()=>{s.disabled=!t.value.trim();grow()});
-t.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}});
+t.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&prefs.enter!==false){e.preventDefault();send()}});
 $('f').addEventListener('submit',e=>{e.preventDefault();send()});
 $('rooms').addEventListener('click',e=>{if(e.target.closest('#np')){openPeople();return}const o=e.target.closest('.onl');if(o){showCard(o.dataset.u,'');return}const b=e.target.closest('.room');if(b)open(b.dataset.id,b.dataset.k)});
 $('back').addEventListener('click',()=>app.classList.remove('chatting'));
