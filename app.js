@@ -15,8 +15,12 @@ if(!firebaseConfig.apiKey||firebaseConfig.apiKey.startsWith('YOUR_')){
  $('gb').style.display='none';throw new Error('Missing Firebase config');
 }
 const fb=initializeApp(firebaseConfig),auth=getAuth(fb),db=getFirestore(fb);
-let me=null,rooms=[],cur=null,msgs=[],unsubR=null,unsubM=null,creating=false,dms=[],curKind='room',unsubD=null,unsubO=null,unsubB=null,blocked=new Set(),replyTo=null,unread={},watch={},notified=new Set(),started=Date.now(),swreg=null;
-const mcol=(id,k)=>collection(db,k==='dm'?'dms':'rooms',id,'messages');
+let me=null,rooms=[],cur=null,msgs=[],unsubR=null,unsubM=null,creating=false,dms=[],curKind='room',unsubD=null,unsubO=null,unsubB=null,blocked=new Set(),replyTo=null,unread={},watch={},notified=new Set(),started=Date.now(),swreg=null,ws='',myWs=[],unsubW=null;
+const rcol=()=>ws?collection(db,'workspaces',ws,'rooms'):collection(db,'rooms');
+const rdoc=id=>doc(rcol(),id);
+const mcol=(id,k)=>k==='dm'?collection(db,'dms',id,'messages'):collection(rdoc(id),'messages');
+const wsInfo=()=>myWs.find(w=>w.id===ws);
+const canDelRoom=r=>!!r&&((!!r.by&&r.by===me.uid)||(!!ws&&(wsInfo()||{}).owner===me.uid));
 
 /* ---------- sign in ---------- */
 const err=m=>{$('ger').textContent=m||''};
@@ -70,7 +74,7 @@ const line=(m,n)=>{const mine=m.uid===me.uid,rx=m.reacts||{};
   +(mine&&m.id?'<button class="del" data-id="'+esc(m.id)+'" aria-label="Delete message" title="Delete">\u00d7</button>':'')
   +(chips?'<div class="rxs">'+chips+'</div>':'')+'</div></div>'};
 function renderLog(){const r=(curKind==='dm'?dms:rooms).find(x=>x.id===cur);if(!r)return;
- $('dt').hidden=curKind==='dm'?false:!(r.by&&me&&r.by===me.uid);$('dt').textContent=curKind==='dm'?'Delete chat':'Delete trace';
+ $('dt').hidden=curKind==='dm'?false:!canDelRoom(r);$('dt').textContent=curKind==='dm'?'Delete chat':'Delete trace';
  $('rt').textContent=(curKind==='dm'?'\u{1F512} ':'')+r.name;$('rs').textContent=curKind==='dm'?'Private. Only you two can see this.':'Shared with everyone signed in';
  const vis=shown();let last='',h=vis.length?'':'<div class="day">Empty page. Write the first line below.</div>';
  vis.forEach(m=>{const d=dayLabel(m.ts);if(d!==last){h+='<div class="day">'+d+'</div>';last=d}h+=line(m)});
@@ -91,10 +95,74 @@ function start(){
  unsubO=onSnapshot(query(collection(db,'users'),orderBy('lastSeen','desc'),limit(30)),snap=>{
   snap.docs.forEach(d=>{const x=d.data();seen[d.id]=x.lastSeen||0;pcache[d.id]=x;asked.add(d.id)});
   renderRooms();renderLog()},()=>{});
- unsubR=onSnapshot(query(collection(db,'rooms'),orderBy('ts')),snap=>{
-  if(snap.empty){addDoc(collection(db,'rooms'),{name:'General',ts:Date.now()});return}
+ subRooms();subWsList()}
+function subRooms(){unsubR&&unsubR();const w=ws;
+ unsubR=onSnapshot(query(rcol(),orderBy('ts')),snap=>{
+  if(w!==ws)return;
+  if(snap.empty){if(!w)addDoc(collection(db,'rooms'),{name:'General',ts:Date.now()});
+   rooms=[];syncWatch();renderRooms();
+   if(curKind==='room'){cur=null;msgs=[];log.innerHTML='';$('rt').textContent=wsInfo()?wsInfo().name:'TraceBook';$('rs').textContent='No traces here yet. Add one on the left.';$('dt').hidden=true}
+   return}
   rooms=snap.docs.map(d=>({id:d.id,name:d.data().name,by:d.data().by||''}));syncWatch();
   if(curKind==='room'&&!rooms.some(r=>r.id===cur))open(rooms[0].id);else{renderRooms();renderLog()}},()=>{$('rs').textContent='Cannot load traces. Check your Firestore rules.'})}
+function subWsList(){
+ unsubW=onSnapshot(query(collection(db,'workspaces'),where('members','array-contains',me.uid)),snap=>{
+  myWs=snap.docs.map(d=>({id:d.id,...d.data()}));
+  if(ws&&!wsInfo()&&!snap.metadata.hasPendingWrites)switchWs('');
+  renderWs()},()=>{})}
+function switchWs(id){ws=id;cur=null;msgs=[];rooms=[];curKind='room';
+ unsubM&&unsubM();Object.keys(watch).forEach(k=>{if(k.startsWith('room|')){watch[k]();delete watch[k]}});
+ Object.keys(unread).forEach(k=>{if(k.startsWith('room|'))delete unread[k]});setTitle();
+ renderRooms();log.innerHTML='';renderWs();subRooms()}
+function renderWs(){const sel=$('wsel');if(!sel)return;
+ sel.innerHTML='<option value="">Public (everyone)</option>'+myWs.map(w=>'<option value="'+esc(w.id)+'">'+esc(w.name)+'</option>').join('');
+ sel.value=ws;$('wset').hidden=!ws}
+const genCode=()=>{const A='ABCDEFGHJKMNPQRSTUVWXYZ23456789',b=crypto.getRandomValues(new Uint8Array(10));return [...b].map(x=>A[x%A.length]).join('')};
+async function createWs(name){const code=genCode(),ref=doc(collection(db,'workspaces'));
+ await setDoc(ref,{name,owner:me.uid,members:[me.uid],code,ts:Date.now()});
+ await setDoc(doc(db,'invites',code),{wid:ref.id,name,owner:me.uid});
+ switchWs(ref.id);
+ await addDoc(collection(db,'workspaces',ref.id,'rooms'),{name:'General',ts:Date.now(),by:me.uid})}
+async function joinWs(code){code=code.trim().toUpperCase();
+ const inv=await getDoc(doc(db,'invites',code));if(!inv.exists())throw new Error('bad');
+ const wid=inv.data().wid;let member=false;
+ try{const d=await getDoc(doc(db,'workspaces',wid));member=d.exists()&&d.data().members.includes(me.uid)}catch(e){}
+ if(!member)await updateDoc(doc(db,'workspaces',wid),{members:arrayUnion(me.uid)});
+ switchWs(wid)}
+async function deleteWs(w){
+ const rs=await getDocs(collection(db,'workspaces',w.id,'rooms'));
+ for(const r of rs.docs){const ms=await getDocs(collection(r.ref,'messages'));
+  for(let i=0;i<ms.docs.length;i+=400){const b=writeBatch(db);ms.docs.slice(i,i+400).forEach(d=>b.delete(d.ref));await b.commit()}
+  await deleteDoc(r.ref)}
+ await deleteDoc(doc(db,'invites',w.code));await deleteDoc(doc(db,'workspaces',w.id))}
+async function handleJoin(){const c=new URLSearchParams(location.search).get('join');if(!c)return;
+ history.replaceState({},'',location.pathname);
+ try{const inv=await getDoc(doc(db,'invites',c.trim().toUpperCase()));
+  if(!inv.exists()){toast('That invite link is not valid.');return}
+  const d=inv.data();
+  $('pc').innerHTML='<h3>Join "'+esc(d.name)+'"?</h3><p class="pb">You will see the traces and messages in this group.</p><div class="prow"><button class="btn" id="jx" type="button">Not now</button><button class="btn primary" id="jy" type="button">Join</button></div>';
+  $('pm').style.display='flex';$('jx').onclick=closePm;
+  $('jy').onclick=async()=>{try{await joinWs(c);closePm()}catch(e){alert('Could not join: '+(e.code||e.message))}}
+ }catch(e){toast('Could not open that invite.')}}
+$('rooms').insertAdjacentHTML('beforebegin','<div class="wsbar"><select id="wsel" aria-label="Group"></select><button id="wset" type="button" hidden title="Group settings">\u2699</button><button id="wnew" type="button" title="Create or join a group">+ Group</button></div>');
+$('wsel').onchange=e=>switchWs(e.target.value);
+$('wnew').onclick=()=>{
+ $('pc').innerHTML='<h3>Groups</h3><p class="pb">A group is a private space. Only people you invite can see its traces.</p><label>New group name<input id="wn" maxlength="30" placeholder="Class 12 notes"></label><button class="btn primary" id="wc" type="button">Create group</button><label>Or join with an invite code<input id="wj" maxlength="20" placeholder="Invite code"></label><button class="btn" id="wjb" type="button">Join</button><button class="btn" id="wx" type="button">Close</button>';
+ $('pm').style.display='flex';$('wx').onclick=closePm;
+ $('wc').onclick=async()=>{const n=$('wn').value.trim();if(!n)return;$('wc').disabled=true;try{await createWs(n.slice(0,30));closePm()}catch(e){$('wc').disabled=false;alert('Could not create group: '+(e.code||e.message))}};
+ $('wjb').onclick=async()=>{const c=$('wj').value;if(!c.trim())return;try{await joinWs(c);closePm()}catch(e){alert(e.message==='bad'?'That invite code was not found.':'Could not join: '+(e.code||e.message))}}};
+$('wset').onclick=async()=>{const w=wsInfo();if(!w)return;
+ const owner=w.owner===me.uid,link=location.origin+'/?join='+w.code;
+ $('pc').innerHTML='<h3>'+esc(w.name)+'</h3><p class="pb">'+w.members.length+' member'+(w.members.length===1?'':'s')+'</p><div id="wm" class="pb">Loading...</div><label>Invite code<input id="wcode" readonly></label><button class="btn" id="wcp" type="button">Copy invite link</button><button class="btn" id="wlv" type="button" style="color:var(--margin)">'+(owner?'Delete group':'Leave group')+'</button><button class="btn" id="wx" type="button">Close</button>';
+ $('wcode').value=w.code;$('pm').style.display='flex';$('wx').onclick=closePm;
+ $('wcp').onclick=async()=>{try{await navigator.clipboard.writeText(link);toast('Invite link copied.')}catch(e){prompt('Copy this link:',link)}};
+ $('wlv').onclick=async()=>{
+  if(owner){if(!confirm('Delete "'+w.name+'" with all its traces and messages for everyone? This cannot be undone.'))return;
+   $('wlv').disabled=true;try{await deleteWs(w);closePm();switchWs('')}catch(e){$('wlv').disabled=false;alert('Could not delete: '+(e.code||e.message))}}
+  else{if(!confirm('Leave "'+w.name+'"?'))return;
+   try{await updateDoc(doc(db,'workspaces',w.id),{members:arrayRemove(me.uid)});closePm();switchWs('')}catch(e){alert('Could not leave: '+(e.code||e.message))}}};
+ const names=await Promise.all(w.members.map(async u=>{if(!pcache[u]){try{const d=await getDoc(doc(db,'users',u));pcache[u]=d.exists()?d.data():{}}catch(e){pcache[u]={}}}return((pcache[u]||{}).name||'Someone')+(u===w.owner?' (owner)':'')}));
+ if($('wm'))$('wm').textContent=names.join(', ')};
 function send(){const v=t.value.trim();if(!v||!cur)return;
  const data={uid:me.uid,name:me.displayName||me.email||'Someone',text:v,ts:Date.now()};if(replyTo)data.reply=replyTo;
  addDoc(mcol(cur,curKind),data).catch(()=>toast('Message could not be sent.'));replyTo=null;showReply();
@@ -106,7 +174,7 @@ $('f').addEventListener('submit',e=>{e.preventDefault();send()});
 $('rooms').addEventListener('click',e=>{if(e.target.closest('#np')){openPeople();return}const o=e.target.closest('.onl');if(o){showCard(o.dataset.u,'');return}const b=e.target.closest('.room');if(b)open(b.dataset.id,b.dataset.k)});
 $('back').addEventListener('click',()=>app.classList.remove('chatting'));
 $('nf').addEventListener('submit',e=>{e.preventDefault();const v=$('nr').value.trim();if(!v)return;$('nr').value='';
- addDoc(collection(db,'rooms'),{name:v.slice(0,30),ts:Date.now(),by:me.uid}).then(r=>open(r.id))});
+ addDoc(rcol(),{name:v.slice(0,30),ts:Date.now(),by:me.uid}).then(r=>open(r.id))});
 document.querySelector('header.top').insertAdjacentHTML('beforeend','<button id="dt" type="button" hidden>Delete trace</button>');
 $('dt').onclick=async()=>{
  if(curKind==='dm'){const id=cur;if(!confirm('Delete this private chat and all its messages for both of you? This cannot be undone.'))return;
@@ -116,19 +184,19 @@ $('dt').onclick=async()=>{
    await deleteDoc(doc(db,'dms',id));curKind='room';if(rooms[0])open(rooms[0].id)}
   catch(e){alert('Could not delete: '+(e.code||e.message))}
   $('dt').disabled=false;return}
- const r=rooms.find(x=>x.id===cur);if(curKind!=='room'||!r||r.by!==me.uid)return;
+ const r=rooms.find(x=>x.id===cur);if(curKind!=='room'||!canDelRoom(r))return;
  if(!confirm('Delete the trace "'+r.name+'" and all its messages? This cannot be undone.'))return;
  $('dt').disabled=true;
- try{const snap=await getDocs(collection(db,'rooms',r.id,'messages'));
+ try{const snap=await getDocs(mcol(r.id,'room'));
   for(let i=0;i<snap.docs.length;i+=400){const b=writeBatch(db);snap.docs.slice(i,i+400).forEach(d=>b.delete(d.ref));await b.commit()}
-  await deleteDoc(doc(db,'rooms',r.id))}
+  await deleteDoc(rdoc(r.id))}
  catch(e){alert('Could not delete: '+(e.code||e.message))}
  $('dt').disabled=false};
 
 /* ---------- reactions, replies, notifications ---------- */
 $('f').insertAdjacentHTML('beforebegin','<div id="rp" hidden></div>');
 document.head.insertAdjacentHTML('beforeend','<style>#rp{padding:8px 20px;background:var(--paper2);border-top:1px solid var(--line);font-size:14px;color:var(--pencil);display:flex;justify-content:space-between;gap:10px;align-items:center}#rp[hidden]{display:none}#rp span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#rp button{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}.quote{height:34px;line-height:34px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--pencil);font:14px/34px var(--ui);border-left:3px solid var(--line);padding-left:8px}.rxs{display:flex;gap:6px;height:34px;align-items:center;overflow-x:auto}.chip{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:99px;padding:0 10px;font:inherit;font-size:14px;height:26px;cursor:pointer;flex:none}.chip.on{border-color:var(--me)}.act{border:0;background:none;color:var(--pencil);font-size:16px;cursor:pointer;margin-left:6px;padding:0 4px;line-height:inherit;opacity:.65}.badge{display:inline-block;background:var(--margin);color:#fff;border-radius:99px;font-size:11px;font-weight:800;padding:1px 7px;margin-left:8px}</style>');
-const msgRef=id=>doc(db,curKind==='dm'?'dms':'rooms',cur,'messages',id);
+const msgRef=id=>doc(mcol(cur,curKind),id);
 function toggleReact(id,i){const m=msgs.find(x=>x.id===id);if(!m)return;
  const has=((m.reacts||{})['r'+i]||[]).includes(me.uid);
  updateDoc(msgRef(id),{['reacts.r'+i]:has?arrayRemove(me.uid):arrayUnion(me.uid)}).catch(()=>toast('Could not react.'))}
@@ -164,7 +232,7 @@ if('Notification' in window&&Notification.permission==='default')$('nt').hidden=
 $('nt').onclick=async()=>{try{await Notification.requestPermission()}catch(e){}$('nt').hidden=true;toast(Notification.permission==='granted'?'Notifications are on.':'Notifications are blocked in your browser settings.')};
 
 /* ---------- profile ---------- */
-document.head.insertAdjacentHTML('beforeend','<style>#pm{position:fixed;inset:0;z-index:11;background:rgba(10,15,30,.6);display:none;align-items:center;justify-content:center;padding:20px}#pc{max-width:360px;width:100%;background:var(--paper2);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--margin);border-radius:4px;padding:24px;display:grid;gap:12px;max-height:100%;overflow:auto}#pc h3{margin:0;font-family:"Cormorant Garamond",Georgia,serif;font-size:28px}#pc label{display:grid;gap:4px;font-size:13px;color:var(--pencil)}.pav{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font-size:28px;font-weight:800;color:#fff;object-fit:cover}.pb{margin:0;line-height:1.5;color:var(--pencil)}.sws{display:flex;gap:10px;flex-wrap:wrap}.sw{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer}.sw.on{border-color:var(--ink)}.prow{display:flex;gap:10px}.prow .btn{flex:1}.who{cursor:pointer}.acct .ab{display:grid;gap:4px;flex:none}.tg{display:flex;gap:6px;flex-wrap:wrap}.tg span{border:1px solid var(--line);border-radius:99px;padding:2px 10px;font-size:13px}.em{display:flex;gap:6px;flex-wrap:wrap}.em button{font-size:20px;border:2px solid transparent;background:var(--paper);border-radius:6px;padding:2px 6px;cursor:pointer}.em button.on{border-color:var(--ink)}#pc a{color:var(--me)}.dot-on{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2E9E5B;margin-left:6px}.mav.on{box-shadow:0 0 0 2px var(--paper),0 0 0 4px #2E9E5B}.mav{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px;font:800 12px var(--ui);color:#fff;position:relative;top:-2px}img.mav{display:inline-block}.sec{display:flex;justify-content:space-between;align-items:center;padding:14px 20px 4px;font-size:13px;font-weight:800;color:var(--pencil)}#np{border:1px solid var(--line);background:var(--paper);color:inherit;border-radius:4px;font:inherit;font-size:12px;padding:3px 8px;cursor:pointer}.pr{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:8px 0;color:inherit;font:inherit;cursor:pointer}.pr small{display:block;color:var(--pencil);font-size:12px}.pav.sm{width:36px;height:36px;font-size:16px;flex:none}.pl{max-height:50vh;overflow:auto}#dt{margin-left:auto;border:1px solid var(--line);background:none;color:var(--margin);font:inherit;font-size:13px;padding:6px 10px;border-radius:4px;cursor:pointer}.del{border:0;background:none;color:var(--pencil);font-size:20px;cursor:pointer;margin-left:8px;padding:0 6px;line-height:inherit;opacity:.65}.del:hover{color:var(--margin);opacity:1}</style>');
+document.head.insertAdjacentHTML('beforeend','<style>#pm{position:fixed;inset:0;z-index:11;background:rgba(10,15,30,.6);display:none;align-items:center;justify-content:center;padding:20px}#pc{max-width:360px;width:100%;background:var(--paper2);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--margin);border-radius:4px;padding:24px;display:grid;gap:12px;max-height:100%;overflow:auto}#pc h3{margin:0;font-family:"Cormorant Garamond",Georgia,serif;font-size:28px}#pc label{display:grid;gap:4px;font-size:13px;color:var(--pencil)}.pav{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font-size:28px;font-weight:800;color:#fff;object-fit:cover}.pb{margin:0;line-height:1.5;color:var(--pencil)}.sws{display:flex;gap:10px;flex-wrap:wrap}.sw{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer}.sw.on{border-color:var(--ink)}.prow{display:flex;gap:10px}.prow .btn{flex:1}.who{cursor:pointer}.acct .ab{display:grid;gap:4px;flex:none}.tg{display:flex;gap:6px;flex-wrap:wrap}.tg span{border:1px solid var(--line);border-radius:99px;padding:2px 10px;font-size:13px}.em{display:flex;gap:6px;flex-wrap:wrap}.em button{font-size:20px;border:2px solid transparent;background:var(--paper);border-radius:6px;padding:2px 6px;cursor:pointer}.em button.on{border-color:var(--ink)}#pc a{color:var(--me)}.wsbar{display:flex;gap:6px;padding:10px 20px;border-bottom:1px solid var(--line)}.wsbar select{flex:1;min-width:0;font:inherit;color:inherit;background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:8px}.wsbar button{border:1px solid var(--line);background:var(--paper);color:inherit;border-radius:4px;font:inherit;font-size:13px;padding:0 10px;cursor:pointer}.wsbar button[hidden]{display:none}.dot-on{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2E9E5B;margin-left:6px}.mav.on{box-shadow:0 0 0 2px var(--paper),0 0 0 4px #2E9E5B}.mav{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px;font:800 12px var(--ui);color:#fff;position:relative;top:-2px}img.mav{display:inline-block}.sec{display:flex;justify-content:space-between;align-items:center;padding:14px 20px 4px;font-size:13px;font-weight:800;color:var(--pencil)}#np{border:1px solid var(--line);background:var(--paper);color:inherit;border-radius:4px;font:inherit;font-size:12px;padding:3px 8px;cursor:pointer}.pr{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:8px 0;color:inherit;font:inherit;cursor:pointer}.pr small{display:block;color:var(--pencil);font-size:12px}.pav.sm{width:36px;height:36px;font-size:16px;flex:none}.pl{max-height:50vh;overflow:auto}#dt{margin-left:auto;border:1px solid var(--line);background:none;color:var(--margin);font:inherit;font-size:13px;padding:6px 10px;border-radius:4px;cursor:pointer}.del{border:0;background:none;color:var(--pencil);font-size:20px;cursor:pointer;margin-left:8px;padding:0 6px;line-height:inherit;opacity:.65}.del:hover{color:var(--margin);opacity:1}</style>');
 document.body.insertAdjacentHTML('beforeend','<div id="pm" role="dialog" aria-label="Profile"><div id="pc"></div></div>');
 const pcache={},asked=new Set(),seen={};
 const isOn=u=>!!seen[u]&&Date.now()-seen[u]<300000;
@@ -277,11 +345,11 @@ log.addEventListener('click',e=>{
  const c=e.target.closest('.chip');if(c){toggleReact(c.dataset.id,+c.dataset.i);return}
  const a=e.target.closest('.act');if(a){if(a.dataset.a==='reply')startReply(a.dataset.id);else pickReact(a.dataset.id);return}
  const x=e.target.closest('.del');
- if(x){if(confirm('Delete this message?'))deleteDoc(doc(db,curKind==='dm'?'dms':'rooms',cur,'messages',x.dataset.id)).catch(z=>alert('Could not delete: '+(z.code||z.message)));return}
+ if(x){if(confirm('Delete this message?'))deleteDoc(doc(mcol(cur,curKind),x.dataset.id)).catch(z=>alert('Could not delete: '+(z.code||z.message)));return}
  const w=e.target.closest('.who');if(w&&w.dataset.uid)showCard(w.dataset.uid,w.dataset.n)});
 
 onAuthStateChanged(auth,u=>{
- unsubR&&unsubR();unsubM&&unsubM();unsubD&&unsubD();unsubO&&unsubO();unsubB&&unsubB();Object.keys(watch).forEach(k=>{watch[k]();delete watch[k]});unread={};setTitle();blocked=new Set();dms=[];curKind='room';started=Date.now();
- if(u){me=u;prof={};gate.style.display='none';chip();loadProf();start();
+ unsubR&&unsubR();unsubM&&unsubM();unsubD&&unsubD();unsubO&&unsubO();unsubB&&unsubB();unsubW&&unsubW();ws='';myWs=[];Object.keys(watch).forEach(k=>{watch[k]();delete watch[k]});unread={};setTitle();blocked=new Set();dms=[];curKind='room';started=Date.now();
+ if(u){me=u;prof={};gate.style.display='none';chip();loadProf();start();handleJoin();
   if(matchMedia('(max-width:760px)').matches)app.classList.remove('chatting')}
  else{me=null;rooms=[];cur=null;gate.style.display='flex';$('gp').textContent='Sign in to join the conversation.'}});
