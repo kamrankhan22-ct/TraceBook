@@ -31,35 +31,78 @@ function applyPrefs(){const r=document.documentElement;
 function savePrefs(){try{localStorage.setItem('tb.prefs',JSON.stringify(prefs))}catch(e){}applyPrefs()}
 document.head.insertAdjacentHTML('beforeend','<style>:root[data-theme="light"]{--paper:#EEF1EF;--paper2:#E2E8E6;--ink:#17233F;--pencil:#6A778C;--margin:#C8473B;--line:#C9D3D6;--me:#2B4C9B}:root[data-theme="dark"]{--paper:#141B2B;--paper2:#1B2438;--ink:#E7ECF4;--pencil:#8E9BB3;--margin:#E26A5D;--line:#26314A;--me:#8FB0FF}.msg .body{font-size:var(--mfs,18px)!important}.seg{display:flex;gap:6px}.seg button{flex:1;border:1px solid var(--line);background:var(--paper);color:inherit;border-radius:4px;font:inherit;padding:8px;cursor:pointer}.seg button.on{border-color:var(--ink);background:var(--ink);color:var(--paper)}#pc h4{margin:8px 0 0;font:800 12px var(--ui);color:var(--pencil);letter-spacing:.06em;text-transform:uppercase}#pc label.chk{display:flex;gap:8px;align-items:flex-start;color:var(--ink);font-size:14px}#pc label.chk input{width:auto;margin-top:3px}</style>');
 applyPrefs();
-async function openSettings(){
- const notif=!('Notification' in window)?'Not supported on this browser':Notification.permission==='granted'?'On':Notification.permission==='denied'?'Blocked in browser settings':'Off';
+const box=()=>$('hubc')||$('pc');
+const HCSS=`#pc:has(.hubw){max-width:580px;padding:0;gap:0;overflow:hidden;display:flex;flex-direction:column;max-height:92vh;border-radius:22px!important}
+.hubw{display:flex;flex-direction:column;min-height:0;max-height:92vh}
+.hbanner{position:relative;display:flex;gap:18px;align-items:center;padding:28px 26px 22px 34px;border-bottom:1px solid var(--line);background:radial-gradient(120% 140% at 0% 0%,var(--wash1),transparent 60%),radial-gradient(90% 120% at 100% 100%,var(--wash2),transparent 65%),repeating-linear-gradient(transparent 0 33px,color-mix(in srgb,var(--line) 70%,transparent) 33px 34px)}
+.hbanner::before{content:"";position:absolute;left:18px;top:0;bottom:0;width:2px;background:var(--margin);opacity:.5}
+.hav{flex:none}.hav .pav{width:86px;height:86px;font-size:36px;box-shadow:0 0 0 4px var(--paper),0 0 0 6px var(--margin)}
+.hid{min-width:0}#pc .hid h3{margin:0;font-size:34px;line-height:1.05;overflow:hidden;text-overflow:ellipsis}
+.hid p{margin:3px 0 10px;color:var(--pencil);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hchips{display:flex;gap:6px;flex-wrap:wrap}.hchips span{border:1px solid var(--line);background:color-mix(in srgb,var(--paper) 82%,transparent);border-radius:99px;padding:3px 10px;font-size:12px;font-weight:600;display:inline-flex;align-items:center}
+.hx{position:absolute;right:12px;top:8px;border:0;background:none;color:inherit;font-size:30px;line-height:1;cursor:pointer;opacity:.7}
+.htabs{display:flex;gap:2px;padding:6px 12px 0;border-bottom:1px solid var(--line);overflow-x:auto;background:var(--paper2)}
+.htabs button{border:0;background:none;color:var(--pencil);font:inherit;font-weight:600;padding:11px 14px;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+.htabs button.on{color:var(--ink);border-bottom-color:var(--margin)}
+.hbody{display:grid;gap:12px;padding:16px 20px 22px;overflow:auto;flex:1;min-height:0;align-content:start}
+.hcard{display:grid;gap:10px;border:1px solid var(--line);border-radius:16px;padding:14px 16px;background:color-mix(in srgb,var(--paper) 72%,transparent);box-shadow:0 12px 24px -22px rgba(23,35,63,.6)}
+.gcard{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--line);padding-top:10px}.gcard:first-of-type{border-top:0;padding-top:0}.gcard small{display:block;color:var(--pencil);font-size:12px}.gact{display:flex;gap:6px}.gact .btn{padding:7px 12px;font-size:13px}
+.tips{margin:0;padding:0;list-style:none;display:grid;gap:8px}.tips li{display:flex;gap:10px;align-items:center;font-size:14px}.tips b{min-width:52px;text-align:center;border:1px solid var(--line);border-radius:8px;padding:2px 6px;background:var(--paper);font-size:13px}
+@media (max-width:520px){.hbanner{flex-direction:column;align-items:flex-start;gap:12px;padding-left:30px}.hav .pav{width:72px;height:72px;font-size:30px}}`;
+document.head.insertAdjacentHTML('beforeend','<style>'+HCSS+'</style>');
+let hubTab='profile';
+const HTABS=[['profile','Profile'],['settings','Settings'],['privacy','Privacy'],['groups','Groups'],['about','About']];
+function openHub(tab){
+ hubTab=tab||hubTab;const p=prof||{},n=me.displayName||p.name||'You';
+ const joined=p.joined?'<span>Joined '+esc(new Date(p.joined).toLocaleDateString([],{month:'short',year:'numeric'}))+'</span>':'';
+ $('pc').innerHTML='<div class="hubw"><div class="hbanner"><button class="hx" id="hx" type="button" aria-label="Close">\u00d7</button><div class="hav">'+avatar({name:n,color:p.color,photoURL:me.photoURL,pic:p.pic})+'</div><div class="hid"><h3>'+esc(n)+(p.mood?' '+esc(p.mood):'')+'</h3><p>'+esc(p.bio||me.email||'')+'</p><div class="hchips"><span>'+(p.hideOnline?'\u25CB Status hidden':'<i class="dot-on" style="margin:0 6px 0 0"></i>Online')+'</span>'+joined+'<span>'+myWs.length+' group'+(myWs.length===1?'':'s')+'</span></div></div></div>'
+  +'<nav class="htabs" role="tablist">'+HTABS.map(t=>'<button type="button" role="tab" data-t="'+t[0]+'" class="'+(t[0]===hubTab?'on':'')+'">'+t[1]+'</button>').join('')+'</nav><div class="hbody" id="hubc"></div></div>';
+ $('pm').style.display='flex';$('hx').onclick=closePm;
+ $('pc').querySelector('.htabs').onclick=e=>{const b=e.target.closest('button');if(b)openHub(b.dataset.t)};
+ if(hubTab==='profile')editProfile();else if(hubTab==='groups')renderGroups();else if(hubTab==='about')renderAbout();else renderSettings(hubTab)}
+function renderSettings(part){const B=box();
  const seg=(key,opts)=>'<div class="seg" data-k="'+key+'">'+opts.map(o=>'<button type="button" data-v="'+o[0]+'"'+(String(prefs[key])===o[0]?' class="on"':'')+'>'+o[1]+'</button>').join('')+'</div>';
- $('pc').innerHTML='<h3>Settings</h3>'
-  +'<h4>Appearance</h4><label>Theme</label>'+seg('theme',[['system','Auto'],['light','Light'],['dark','Dark']])
-  +'<label>Message text size</label>'+seg('size',[['s','Small'],['m','Medium'],['l','Large']])
-  +'<h4>Chat</h4><label class="chk"><input type="checkbox" id="sen"> Press Enter to send (Shift+Enter makes a new line)</label>'
-  +'<h4>Notifications</h4><p class="pb">Browser notifications: <b id="snt">'+esc(notif)+'</b></p><button class="btn" id="snb" type="button"'+(notif==='Off'?'':' hidden')+'>Turn on notifications</button>'
-  +'<h4>Privacy</h4><label class="chk"><input type="checkbox" id="shd"> Hide my online status</label><p class="pb"><b>Blocked people</b></p><div id="sbl" class="pb">Loading...</div>'
-  +'<h4>Account</h4><p class="pb">'+esc(me.email||'')+'</p><button class="btn" id="ssh" type="button">Edit profile</button><button class="btn" id="sso" type="button" style="color:var(--margin)">Sign out</button><button class="btn" id="sx" type="button">Close</button>';
- $('pm').style.display='flex';$('sx').onclick=closePm;
- $('pc').querySelectorAll('.seg').forEach(g=>{g.onclick=e=>{const b=e.target.closest('button');if(!b)return;
+ if(part==='settings'){
+  const notif=!('Notification' in window)?'Not supported on this browser':Notification.permission==='granted'?'On':Notification.permission==='denied'?'Blocked in browser settings':'Off';
+  B.innerHTML='<div class="hcard"><h4>Appearance</h4><label>Theme</label>'+seg('theme',[['system','Auto'],['light','Light'],['dark','Dark']])+'<label>Message text size</label>'+seg('size',[['s','Small'],['m','Medium'],['l','Large']])+'</div>'
+   +'<div class="hcard"><h4>Chat</h4><label class="chk"><input type="checkbox" id="sen"> Press Enter to send (Shift+Enter makes a new line)</label></div>'
+   +'<div class="hcard"><h4>Notifications</h4><p class="pb">Browser notifications: <b id="snt">'+esc(notif)+'</b></p><button class="btn" id="snb" type="button"'+(notif==='Off'?'':' hidden')+'>Turn on notifications</button></div>';
+ }else{
+  B.innerHTML='<div class="hcard"><h4>Who can see you</h4><label class="chk"><input type="checkbox" id="shd"> Hide my online status</label><p class="pb">When this is on, others will not see you in Online now.</p></div>'
+   +'<div class="hcard"><h4>Blocked people</h4><div id="sbl" class="pb">Loading...</div></div>';
+ }
+ B.querySelectorAll('.seg').forEach(g=>{g.onclick=e=>{const b=e.target.closest('button');if(!b)return;
   prefs[g.dataset.k]=b.dataset.v;savePrefs();g.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))}});
- $('sen').checked=prefs.enter!==false;$('sen').onchange=()=>{prefs.enter=$('sen').checked;savePrefs()};
- $('snb').onclick=async()=>{try{await Notification.requestPermission()}catch(e){}
+ if($('sen')){$('sen').checked=prefs.enter!==false;$('sen').onchange=()=>{prefs.enter=$('sen').checked;savePrefs()}}
+ if($('snb'))$('snb').onclick=async()=>{try{await Notification.requestPermission()}catch(e){}
   $('snt').textContent=Notification.permission==='granted'?'On':'Blocked in browser settings';$('snb').hidden=true;if($('nt'))$('nt').hidden=true};
- $('shd').checked=!!prof.hideOnline;
- $('shd').onchange=()=>{prof.hideOnline=$('shd').checked;pcache[me.uid]=prof;
-  setDoc(doc(db,'users',me.uid),{hideOnline:prof.hideOnline},{merge:true}).then(beat).catch(()=>toast('Could not save that setting.'))};
- $('ssh').onclick=()=>{closePm();editProfile()};
- $('sso').onclick=()=>{closePm();doSignOut()};
- const drawBlocked=async()=>{const el=$('sbl');if(!el)return;const ids=[...blocked];
-  if(!ids.length){el.textContent='No one is blocked.';return}
-  await Promise.all(ids.map(async u=>{if(!pcache[u]){try{const d=await getDoc(doc(db,'users',u));pcache[u]=d.exists()?d.data():{}}catch(e){pcache[u]={}}}}));
-  const el2=$('sbl');if(!el2)return;
-  el2.innerHTML=ids.map(u=>'<div class="prow" style="align-items:center;margin:4px 0"><span style="flex:1">'+esc((pcache[u]||{}).name||'Someone')+'</span><button class="btn ub" data-u="'+esc(u)+'" type="button" style="flex:none">Unblock</button></div>').join('')};
- drawBlocked();
- $('sbl').onclick=async e=>{const b=e.target.closest('.ub');if(!b)return;
-  try{await deleteDoc(doc(db,'blocks',me.uid+'_'+b.dataset.u));setTimeout(drawBlocked,400)}catch(x){alert('Could not unblock: '+(x.code||x.message))}}}
+ if($('shd')){$('shd').checked=!!prof.hideOnline;
+  $('shd').onchange=()=>{prof.hideOnline=$('shd').checked;pcache[me.uid]=prof;
+   setDoc(doc(db,'users',me.uid),{hideOnline:prof.hideOnline},{merge:true}).then(()=>{beat();openHub('privacy')}).catch(()=>toast('Could not save that setting.'))}}
+ if($('sbl')){
+  const drawBlocked=async()=>{const el=$('sbl');if(!el)return;const ids=[...blocked];
+   if(!ids.length){el.textContent='No one is blocked.';return}
+   await Promise.all(ids.map(async u=>{if(!pcache[u]){try{const d=await getDoc(doc(db,'users',u));pcache[u]=d.exists()?d.data():{}}catch(e){pcache[u]={}}}}));
+   const el2=$('sbl');if(!el2)return;
+   el2.innerHTML=ids.map(u=>'<div class="prow" style="align-items:center;margin:4px 0"><span style="flex:1">'+esc((pcache[u]||{}).name||'Someone')+'</span><button class="btn ub" data-u="'+esc(u)+'" type="button" style="flex:none">Unblock</button></div>').join('')};
+  drawBlocked();
+  $('sbl').onclick=async e=>{const b=e.target.closest('.ub');if(!b)return;
+   try{await deleteDoc(doc(db,'blocks',me.uid+'_'+b.dataset.u));setTimeout(drawBlocked,400)}catch(x){alert('Could not unblock: '+(x.code||x.message))}}}}
+function renderGroups(){const B=box();
+ const card=(id,name,sub,extra)=>'<div class="gcard"><div><b>'+esc(name)+'</b><small>'+esc(sub)+'</small></div><div class="gact">'+extra+'<button class="btn go" type="button" data-id="'+esc(id)+'">Open</button></div></div>';
+ B.innerHTML='<div class="hcard"><h4>Your spaces</h4>'+card('','Public (everyone)','Open to everyone who is signed in','')
+  +myWs.map(w=>card(w.id,w.name,w.members.length+' member'+(w.members.length===1?'':'s')+(w.owner===me.uid?' \u00b7 You own this':''),'<button class="btn mg" type="button" data-id="'+esc(w.id)+'">Manage</button>')).join('')+'</div>'
+  +'<button class="btn primary" id="gnew" type="button">+ Create or join a group</button>';
+ B.onclick=e=>{const g=e.target.closest('.go'),m=e.target.closest('.mg');
+  if(g){switchWs(g.dataset.id);closePm();return}
+  if(m){switchWs(m.dataset.id);closePm();setTimeout(()=>$('wset').click(),60);return}
+  if(e.target.closest('#gnew')){closePm();setTimeout(()=>$('wnew').click(),60)}}}
+function renderAbout(){const B=box();
+ B.innerHTML='<div class="hcard"><h4>Account</h4><p class="pb">'+esc(me.email||'')+'</p><button class="btn" id="sso" type="button" style="color:var(--margin)">Sign out</button></div>'
+  +'<div class="hcard"><h4>Quick tips</h4><ul class="tips"><li><b>\u263A</b> React to a message</li><li><b>\u21A9</b> Reply to a message</li><li><b>\u{1F50D}</b> Search inside a chat</li><li><b>+ Group</b> Make a private space and invite people</li></ul></div>'
+  +'<div class="hcard"><h4>Install on your phone</h4><p class="pb">Open your browser menu and choose <b>Add to Home screen</b>. TraceBook then opens like an app.</p></div>'
+  +'<div class="hcard"><h4>About</h4><p class="pb">TraceBook \u00b7 Conversations, kept on the page.<br>Built on a phone.</p></div>';
+ $('sso').onclick=()=>{closePm();doSignOut()}}
 
 /* ---------- sign in ---------- */
 const err=m=>{$('ger').textContent=m||''};
@@ -94,8 +137,8 @@ $('gr').onclick=async()=>{const em=$('ge').value.trim();if(!em){err('Type your e
 
 /* ---------- chat ---------- */
 function chip(){const a=$('acct'),n=me.displayName||me.email||'You';
- a.innerHTML=((prof.pic||me.photoURL)?'<img class="av" alt="" referrerpolicy="no-referrer" src="'+esc(prof.pic||me.photoURL)+'">':'<span class="av" style="background:'+esc(prof.color||'')+'">'+esc(n.charAt(0).toUpperCase())+'</span>')+'<div><b>'+esc(n)+'</b><small>'+esc((prof.mood?prof.mood+' ':'')+(prof.bio||me.email||''))+'</small></div><div class="ab"><button id="pe" type="button">Profile</button><button id="se" type="button">Settings</button></div>';
- $('se').onclick=openSettings;$('pe').onclick=editProfile}
+ a.innerHTML=((prof.pic||me.photoURL)?'<img class="av" alt="" referrerpolicy="no-referrer" src="'+esc(prof.pic||me.photoURL)+'">':'<span class="av" style="background:'+esc(prof.color||'')+'">'+esc(n.charAt(0).toUpperCase())+'</span>')+'<div><b>'+esc(n)+'</b><small>'+esc((prof.mood?prof.mood+' ':'')+(prof.bio||me.email||''))+'</small></div><div class="ab"><button id="hub" type="button">My space</button></div>';
+ $('hub').onclick=()=>openHub('profile')}
 async function doSignOut(){try{await setDoc(doc(db,'users',me.uid),{lastSeen:0},{merge:true})}catch(e){}signOut(auth)}
 const shown=()=>msgs.filter(m=>!blocked.has(m.uid));
 function renderRooms(){
@@ -314,7 +357,7 @@ async function loadProf(){
  }catch(e){prof={}}
  pcache[me.uid]=prof;asked.add(me.uid);chip();renderLog();beat()}
 async function showCard(uid,fallback){
- if(uid===me.uid)return editProfile();
+ if(uid===me.uid)return openHub('profile');
  $('pc').innerHTML='<p class="pb">Loading...</p>';$('pm').style.display='flex';
  let p={};try{const d=await getDoc(doc(db,'users',uid));if(d.exists())p=d.data()}catch(e){}
  p.name=p.name||fallback||'Someone';
@@ -336,19 +379,17 @@ async function showCard(uid,fallback){
    if(curKind==='dm'&&(dms.find(x=>x.id===cur)||{}).other===uid&&rooms[0])open(rooms[0].id)}
   closePm()}catch(e){alert('Could not update: '+(e.code||e.message))}}}
 function editProfile(){
- let col=prof.color||COLORS[0],mood=prof.mood||'',pic=prof.pic||'';const n=me.displayName||prof.name||'';
- $('pc').innerHTML='<h3>Your profile</h3><div id="pvw"></div><div class="prow"><button class="btn" id="pup" type="button">Choose photo</button><button class="btn" id="prm" type="button">Remove</button></div><input id="pfile" type="file" accept="image/*" hidden>'
-  +'<label>Name<input id="pn" maxlength="30"></label>'
-  +'<label>Status<input id="pbio" maxlength="80" placeholder="A few words about you"></label>'
-  +'<label>Mood</label><div class="em">'+MOODS.map(m=>'<button type="button" data-m="'+m+'"'+(m===mood?' class="on"':'')+'>'+m+'</button>').join('')+'</div>'
+ const B=box();let col=prof.color||COLORS[0],mood=prof.mood||'',pic=prof.pic||'';const n=me.displayName||prof.name||'';
+ B.innerHTML='<div class="hcard"><h4>Photo and name</h4><div id="pvw"></div><div class="prow"><button class="btn" id="pup" type="button">Choose photo</button><button class="btn" id="prm" type="button">Remove</button></div><input id="pfile" type="file" accept="image/*" hidden>'
+  +'<label>Name<input id="pn" maxlength="30"></label><label>Status<input id="pbio" maxlength="80" placeholder="A few words about you"></label></div>'
+  +'<div class="hcard"><h4>About you</h4><label>Mood</label><div class="em">'+MOODS.map(m=>'<button type="button" data-m="'+m+'"'+(m===mood?' class="on"':'')+'>'+m+'</button>').join('')+'</div>'
   +'<label>Pronouns<input id="ppr" maxlength="20" placeholder="she/her, he/him, they/them"></label>'
   +'<label>City<input id="pci" maxlength="30" placeholder="Where you are"></label>'
   +'<label>Interests (up to 3, separated by commas)<input id="ptg" maxlength="60" placeholder="music, books, cricket"></label>'
-  +'<label>Link (starts with https://)<input id="pli" maxlength="100" placeholder="https://"></label>'
-  +'<label style="display:flex;gap:8px;align-items:center"><input id="phd" type="checkbox" style="width:auto"> Hide my online status</label>'
-  +'<label>Colour (used when you have no photo)</label><div class="sws">'+COLORS.map(c=>'<button type="button" class="sw'+(c===col?' on':'')+'" data-c="'+c+'" style="background:'+c+'" aria-label="Colour"></button>').join('')+'</div>'
-  +'<small class="pb">'+esc(me.email||'')+'</small><div class="prow"><button class="btn" id="pcx" type="button">Cancel</button><button class="btn primary" id="psv" type="button">Save</button></div>';
- $('pn').value=n;$('pbio').value=prof.bio||'';$('ppr').value=prof.pronouns||'';$('pci').value=prof.city||'';$('ptg').value=prof.tags||'';$('pli').value=prof.link||'';$('phd').checked=!!prof.hideOnline;
+  +'<label>Link (starts with https://)<input id="pli" maxlength="100" placeholder="https://"></label></div>'
+  +'<div class="hcard"><h4>Colour</h4><label>Used when you have no photo</label><div class="sws">'+COLORS.map(c=>'<button type="button" class="sw'+(c===col?' on':'')+'" data-c="'+c+'" style="background:'+c+'" aria-label="Colour"></button>').join('')+'</div></div>'
+  +'<div class="prow"><button class="btn" id="pcx" type="button">Cancel</button><button class="btn primary" id="psv" type="button">Save changes</button></div>';
+ $('pn').value=n;$('pbio').value=prof.bio||'';$('ppr').value=prof.pronouns||'';$('pci').value=prof.city||'';$('ptg').value=prof.tags||'';$('pli').value=prof.link||'';
  $('pm').style.display='flex';
  const pv=()=>{$('pvw').innerHTML=avatar({name:n,color:col,photoURL:me.photoURL,pic})};pv();
  $('pup').onclick=()=>$('pfile').click();
@@ -359,12 +400,12 @@ function editProfile(){
   im.onload=()=>{const c=document.createElement('canvas');c.width=c.height=160;const x=c.getContext('2d'),m=Math.min(im.width,im.height);
    x.drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,160,160);URL.revokeObjectURL(u);pic=c.toDataURL('image/jpeg',0.82);pv()};
   im.onerror=()=>{URL.revokeObjectURL(u);alert('Could not read that image.')};im.src=u};
- $('pc').querySelector('.sws').onclick=e=>{const b=e.target.closest('.sw');if(!b)return;col=b.dataset.c;
-  $('pc').querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x===b));
+ B.querySelector('.sws').onclick=e=>{const b=e.target.closest('.sw');if(!b)return;col=b.dataset.c;
+  B.querySelectorAll('.sw').forEach(x=>x.classList.toggle('on',x===b));
   pv()};
- $('pc').querySelector('.em').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+ B.querySelector('.em').onclick=e=>{const b=e.target.closest('button');if(!b)return;
   mood=mood===b.dataset.m?'':b.dataset.m;
-  $('pc').querySelectorAll('.em button').forEach(x=>x.classList.toggle('on',x.dataset.m===mood))};
+  B.querySelectorAll('.em button').forEach(x=>x.classList.toggle('on',x.dataset.m===mood))};
  $('pcx').onclick=closePm;
  $('psv').onclick=async()=>{
   const name=$('pn').value.trim()||n||'Someone',bio=$('pbio').value.trim().slice(0,80),
@@ -374,9 +415,9 @@ function editProfile(){
   if(link&&!safeLink(link)){alert('The link must start with https:// and have no spaces.');return}
   $('psv').disabled=true;
   try{await updateProfile(auth.currentUser,{displayName:name});
-   prof={name,bio,color:col,photoURL:me.photoURL||'',pic,mood,pronouns,city,link,tags,hideOnline:$('phd').checked,joined:prof.joined||Date.now()};
+   prof={name,bio,color:col,photoURL:me.photoURL||'',pic,mood,pronouns,city,link,tags,hideOnline:!!prof.hideOnline,joined:prof.joined||Date.now()};
    await setDoc(doc(db,'users',me.uid),prof,{merge:true});
-   pcache[me.uid]=prof;beat();me=auth.currentUser;chip();closePm();renderRooms();renderLog()}
+   pcache[me.uid]=prof;beat();me=auth.currentUser;chip();renderRooms();renderLog();toast('Profile saved.');openHub('profile')}
   catch(e){$('psv').disabled=false;alert('Could not save: '+(e.code||e.message))}}}
 async function openPeople(){
  $('pc').innerHTML='<h3>New private chat</h3><input id="pq" placeholder="Search by name"><div id="pl" class="pl"><p class="pb">Loading...</p></div><button class="btn" id="ppx" type="button">Close</button>';
