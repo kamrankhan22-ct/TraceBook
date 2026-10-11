@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#17233F">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-512.png">
 <title>TraceBook</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 48 48%27%3E%3Ccircle cx=%2724%27 cy=%2724%27 r=%2722%27 fill=%27%2317233F%27/%3E%3Cpath d=%27M24 34C19 31 14 30 11 31V16c3-1 8 0 13 3 5-3 10-4 13-3v15c-3-1-8 0-13 3z%27 fill=%27none%27 stroke=%27%23EEF1EF%27 stroke-width=%272%27/%3E%3Cpath d=%27M14 22c4-1 7 1 10 3s7 1 10-1%27 fill=%27none%27 stroke=%27%23E26A5D%27 stroke-width=%272.2%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -123,6 +125,7 @@ background-image:repeating-linear-gradient(transparent 0 33px,color-mix(in srgb,
 #gate h2{margin:0 0 6px;font-family:var(--serif);font-size:34px;line-height:1.05}
 #gate p{margin:0 0 18px;line-height:1.5;color:var(--pencil)}
 #gb{display:grid;gap:10px}
+#gate .legal{margin:4px 0 0;font-size:12px;line-height:1.5;color:var(--pencil);text-align:center}#gate .legal a{color:var(--me)}
 
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #log .day:only-child::before{filter:invert(.92) hue-rotate(180deg)}}
 :root[data-theme="dark"] #log .day:only-child::before{filter:invert(.92) hue-rotate(180deg)}
@@ -196,6 +199,7 @@ header.top h1{font-size:25px}
     <button class="btn" id="gm" type="button" style="border:0;background:none;text-decoration:underline">New here? Create an account</button>
     <button class="btn" id="gr" type="button" style="border:0;background:none;font-weight:400;color:var(--pencil)">Forgot password</button>
     <p id="ger" role="alert" style="color:var(--margin);margin:0;font-size:14px"></p>
+    <p class="legal">By continuing, you agree to the <a href="terms.html" target="_blank" rel="noopener">Terms</a> and the <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</p>
    </div>
   </div>
  </div>
