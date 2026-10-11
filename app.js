@@ -48,6 +48,9 @@ const HCSS=`#pc:has(.hubw){max-width:580px;padding:0;gap:0;overflow:hidden;displ
 .hcard{display:grid;gap:10px;border:1px solid var(--line);border-radius:16px;padding:14px 16px;background:color-mix(in srgb,var(--paper) 72%,transparent);box-shadow:0 12px 24px -22px rgba(23,35,63,.6)}
 .gcard{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--line);padding-top:10px}.gcard:first-of-type{border-top:0;padding-top:0}.gcard small{display:block;color:var(--pencil);font-size:12px}.gact{display:flex;gap:6px}.gact .btn{padding:7px 12px;font-size:13px}
 .tips{margin:0;padding:0;list-style:none;display:grid;gap:8px}.tips li{display:flex;gap:10px;align-items:center;font-size:14px}.tips b{min-width:52px;text-align:center;border:1px solid var(--line);border-radius:8px;padding:2px 6px;background:var(--paper);font-size:13px}
+.dl{display:grid}.drow{display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:14px}.drow span:first-child{color:var(--pencil);flex:none}.drow span:last-child{text-align:right;overflow-wrap:anywhere}
+.mbox{border:1px solid var(--line);border-left:4px solid var(--margin);border-radius:12px;padding:12px 14px;background:var(--paper);font-family:var(--txt);font-size:17px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:30vh;overflow:auto}
+#ib{margin-left:8px;border:1px solid var(--line);background:none;color:inherit;border-radius:10px;font-size:16px;padding:4px 10px;cursor:pointer}#ib+#dt{margin-left:8px}#rt{cursor:pointer}.msg time{cursor:pointer}.msg time:hover{color:var(--ink);text-decoration:underline}
 .fbr{display:flex;gap:8px}.fbr button{flex:1;font-size:32px;line-height:1;padding:10px 0;border:2px solid transparent;background:var(--paper);border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:transform .15s}.fbr button small{font:600 11px var(--ui);color:var(--pencil)}.fbr button:hover{transform:translateY(-2px)}.fbr button.on{border-color:var(--margin);background:color-mix(in srgb,var(--margin) 10%,var(--paper));transform:scale(1.04)}
 .thx{text-align:center;padding:26px 16px;justify-items:center}.thx .big{font-size:54px;line-height:1}
 @media (max-width:520px){.hbanner{flex-direction:column;align-items:flex-start;gap:12px;padding-left:30px}.hav .pav{width:72px;height:72px;font-size:30px}}`;
@@ -121,7 +124,7 @@ function renderFeedback(){const B=box();let rate=0,kind='Idea';
   catch(e){$('fbs').disabled=false;alert('Could not send feedback: '+(e.code||e.message))}}}
 function renderAbout(){const B=box();
  B.innerHTML='<div class="hcard"><h4>Account</h4><p class="pb">'+esc(me.email||'')+'</p><button class="btn" id="sso" type="button" style="color:var(--margin)">Sign out</button></div>'
-  +'<div class="hcard"><h4>Quick tips</h4><ul class="tips"><li><b>\u263A</b> React to a message</li><li><b>\u21A9</b> Reply to a message</li><li><b>\u{1F50D}</b> Search inside a chat</li><li><b>+ Group</b> Make a private space and invite people</li></ul></div>'
+  +'<div class="hcard"><h4>Quick tips</h4><ul class="tips"><li><b>\u263A</b> React to a message</li><li><b>\u21A9</b> Reply to a message</li><li><b>\u{1F50D}</b> Search inside a chat</li><li><b>\u2139\uFE0F</b> See details of a chat</li><li><b>9:15</b> Tap a message time for its details</li><li><b>+ Group</b> Make a private space and invite people</li></ul></div>'
   +'<div class="hcard"><h4>Install on your phone</h4><p class="pb">Open your browser menu and choose <b>Add to Home screen</b>. TraceBook then opens like an app.</p></div>'
   +'<div class="hcard"><h4>About</h4><p class="pb">TraceBook \u00b7 Conversations, kept on the page.<br>Built on a phone.</p></div>';
  $('sso').onclick=()=>{closePm();doSignOut()}}
@@ -203,7 +206,7 @@ function hl(text){const q=msgQ.trim();text=text||'';if(!q)return esc(text);
 const REACTS=['👍','❤️','😂','😮','🙏','🔥'];
 const line=(m,n)=>{const mine=m.uid===me.uid,rx=m.reacts||{};
  const chips=REACTS.map((e,i)=>{const a=rx['r'+i]||[];return a.length?'<button class="chip'+(a.includes(me.uid)?' on':'')+'" data-id="'+esc(m.id||'')+'" data-i="'+i+'">'+e+' '+a.length+'</button>':''}).join('');
- return '<div class="msg'+(mine?' me':'')+(n?' new':'')+'"><time>'+hm(m.ts)+'</time><span class="rule"></span><div class="body">'
+ return '<div class="msg'+(mine?' me':'')+(n?' new':'')+'" data-id="'+esc(m.id||'')+'"><time title="Message details">'+hm(m.ts)+'</time><span class="rule"></span><div class="body">'
   +(m.reply?'<div class="quote">\u21A9 '+esc(m.reply.name||'')+': '+esc(m.reply.text||'')+'</div>':'')
   +mav(m)+'<span class="who" data-uid="'+esc(m.uid||'')+'" data-n="'+esc(m.name||'')+'">'+esc(m.name||'Someone')+'</span>'+hl(m.text)
   +(m.id?'<button class="act" data-a="react" data-id="'+esc(m.id)+'" title="React" aria-label="React">\u263A</button><button class="act" data-a="reply" data-id="'+esc(m.id)+'" title="Reply" aria-label="Reply">\u21A9</button>':'')
@@ -223,7 +226,7 @@ function open(id,k='room'){cur=id;curKind=k;secTab=k==='dm'?'private':(ws?'group
   msgs=snap.docs.map(d=>({...d.data(),id:d.id}));renderRooms();renderLog();ensureProfiles(msgs)},()=>{$('rs').textContent='Cannot load messages. Check your Firestore rules.'})}
 function start(){
  unsubD=onSnapshot(query(collection(db,'dms'),where('members','array-contains',me.uid)),snap=>{
-  dms=snap.docs.map(d=>{const m=d.data(),o=(m.members||[]).find(x=>x!==me.uid);return{id:d.id,other:o,name:(m.names&&m.names[o])||'Someone'}});
+  dms=snap.docs.map(d=>{const m=d.data(),o=(m.members||[]).find(x=>x!==me.uid);return{id:d.id,other:o,ts:m.ts||0,name:(m.names&&m.names[o])||'Someone'}});
   syncWatch();
   if(curKind==='dm'&&!dms.some(x=>x.id===cur)&&rooms[0]){open(rooms[0].id);return}
   renderRooms();if(curKind==='dm')renderLog()},()=>{});
@@ -240,7 +243,7 @@ function subRooms(){unsubR&&unsubR();const w=ws;
    rooms=[];syncWatch();renderRooms();
    if(curKind==='room'){cur=null;msgs=[];log.innerHTML='';$('rt').textContent=wsInfo()?wsInfo().name:'TraceBook';$('rs').textContent='No traces here yet. Add one on the left.';$('dt').hidden=true}
    return}
-  rooms=snap.docs.map(d=>({id:d.id,name:d.data().name,by:d.data().by||''}));syncWatch();
+  rooms=snap.docs.map(d=>({id:d.id,name:d.data().name,by:d.data().by||'',ts:d.data().ts||0}));syncWatch();
   if(curKind==='room'&&!rooms.some(r=>r.id===cur))open(rooms[0].id);else{renderRooms();renderLog()}},()=>{$('rs').textContent='Cannot load traces. Check your Firestore rules.'})}
 function subWsList(){
  unsubW=onSnapshot(query(collection(db,'workspaces'),where('members','array-contains',me.uid)),snap=>{
@@ -327,6 +330,8 @@ $('dt').insertAdjacentHTML('beforebegin','<button id="sb" type="button" title="S
 $('sb').onclick=()=>{const b=$('msb');b.hidden=!b.hidden;if(b.hidden){msgQ='';$('mq').value='';renderLog()}else $('mq').focus()};
 $('mq').oninput=e=>{msgQ=e.target.value;renderLog()};
 $('mx').onclick=()=>{$('msb').hidden=true;msgQ='';$('mq').value='';renderLog()};
+$('sb').insertAdjacentHTML('afterend','<button id="ib" type="button" title="Chat details" aria-label="Chat details">\u2139\uFE0F</button>');
+$('ib').onclick=()=>showChatInfo();$('rt').onclick=()=>showChatInfo();
 $('dt').onclick=async()=>{
  if(curKind==='dm'){const id=cur;if(!confirm('Delete this private chat and all its messages for both of you? This cannot be undone.'))return;
   $('dt').disabled=true;
@@ -418,12 +423,15 @@ async function showCard(uid,fallback){
  let p={};try{const d=await getDoc(doc(db,'users',uid));if(d.exists())p=d.data()}catch(e){}
  p.name=p.name||fallback||'Someone';
  const tags=(p.tags||'').split(',').map(x=>x.trim()).filter(Boolean),link=safeLink(p.link);
+ const mutual=myWs.filter(w=>(w.members||[]).includes(uid)).map(w=>w.name),cnt=msgs.filter(m=>m.uid===uid).length;
  $('pc').innerHTML=avatar(p)+'<h3>'+esc(p.name)+(p.mood?' '+esc(p.mood):'')+'</h3>'
   +(p.pronouns?'<small class="pb">'+esc(p.pronouns)+'</small>':'')
   +'<p class="pb">'+(esc(p.bio||'')||'No status yet.')+'</p>'
   +(p.city?'<p class="pb">\u{1F4CD} '+esc(p.city)+'</p>':'')
   +(tags.length?'<div class="tg">'+tags.map(x=>'<span>'+esc(x)+'</span>').join('')+'</div>':'')
   +(link?'<p class="pb"><a href="'+esc(link)+'" target="_blank" rel="noopener noreferrer">'+esc(link.replace(/^https:\/\//i,''))+'</a></p>':'')
+  +(mutual.length?'<p class="pb"><b>Groups together:</b> '+esc(mutual.join(', '))+'</p>':'')
+  +(cnt?'<p class="pb">'+cnt+' message'+(cnt===1?'':'s')+' in this chat</p>':'')
   +(isOn(uid)?'<small class="pb" style="color:#2E9E5B">Online now</small>':(p.lastSeen>0?'<small class="pb">Last seen '+ago(p.lastSeen)+'</small>':''))
   +(p.joined?'<small class="pb">Joined '+new Date(p.joined).toLocaleDateString([],{month:'long',year:'numeric'})+'</small>':'')
   +'<div class="prow"><button class="btn" id="pbk" type="button">'+(blocked.has(uid)?'Unblock':'Block')+'</button><button class="btn" id="pcl" type="button">Close</button></div>';
@@ -475,6 +483,43 @@ function editProfile(){
    await setDoc(doc(db,'users',me.uid),prof,{merge:true});
    pcache[me.uid]=prof;beat();me=auth.currentUser;chip();renderRooms();renderLog();toast('Profile saved.');openHub('profile')}
   catch(e){$('psv').disabled=false;alert('Could not save: '+(e.code||e.message))}}}
+async function showMsgInfo(id){
+ const m=msgs.find(x=>x.id===id);if(!m)return;
+ const rx=m.reacts||{},uids=new Set([m.uid]);
+ REACTS.forEach((e,i)=>(rx['r'+i]||[]).forEach(u=>uids.add(u)));
+ await Promise.all([...uids].filter(u=>u&&!pcache[u]).map(async u=>{try{const d=await getDoc(doc(db,'users',u));pcache[u]=d.exists()?d.data():{}}catch(e){pcache[u]={}}}));
+ const nm=u=>u===me.uid?'You':((pcache[u]||{}).name||'Someone');
+ const rxRows=REACTS.map((e,i)=>{const a=rx['r'+i]||[];return a.length?'<div class="drow"><span>'+e+' '+a.length+'</span><span>'+esc(a.map(nm).join(', '))+'</span></div>':''}).join('');
+ $('pc').innerHTML='<h3>Message details</h3><div class="mbox">'+esc(m.text)+'</div>'
+  +'<div class="dl"><div class="drow"><span>From</span><span>'+esc(nm(m.uid))+'</span></div>'
+  +'<div class="drow"><span>Sent</span><span>'+esc(new Date(m.ts).toLocaleString([],{weekday:'short',day:'numeric',month:'short',year:'numeric',hour:'numeric',minute:'2-digit'}))+'</span></div>'
+  +'<div class="drow"><span>Length</span><span>'+(m.text||'').length+' characters</span></div>'
+  +(m.reply?'<div class="drow"><span>Reply to</span><span>'+esc((m.reply.name||'')+': '+(m.reply.text||''))+'</span></div>':'')+'</div>'
+  +(rxRows?'<h4>Reactions</h4><div class="dl">'+rxRows+'</div>':'<p class="pb">No reactions yet.</p>')
+  +'<div class="prow"><button class="btn" id="mix" type="button">Close</button><button class="btn" id="mir" type="button">Reply</button>'+(m.uid===me.uid?'<button class="btn" id="mid" type="button" style="color:var(--margin)">Delete</button>':'')+'</div>';
+ $('pm').style.display='flex';$('mix').onclick=closePm;
+ $('mir').onclick=()=>{closePm();startReply(id)};
+ if($('mid'))$('mid').onclick=()=>{if(!confirm('Delete this message?'))return;closePm();deleteDoc(doc(mcol(cur,curKind),id)).catch(z=>alert('Could not delete: '+(z.code||z.message)))}}
+async function showChatInfo(){
+ const r=(curKind==='dm'?dms:rooms).find(x=>x.id===cur);if(!r)return;
+ const vis=shown(),w=wsInfo();
+ if(r.by&&!pcache[r.by]){try{const d=await getDoc(doc(db,'users',r.by));pcache[r.by]=d.exists()?d.data():{}}catch(e){pcache[r.by]={}}}
+ const nm=u=>u===me.uid?'You':((pcache[u]||{}).name||'Someone');
+ const dt=ts=>ts?new Date(ts).toLocaleDateString([],{day:'numeric',month:'short',year:'numeric'}):'Unknown';
+ const kindTxt=curKind==='dm'?'\u{1F512} Private chat':(ws?'Group trace':'Public trace');
+ const who=curKind==='dm'?'Only you and '+esc(r.name):(ws?'The '+((w||{}).members||[]).length+' members of '+esc((w||{}).name||'this group'):'Everyone who is signed in');
+ const rows=[['Type',kindTxt],['Who can see',who]];
+ if(curKind==='room')rows.push(['Created by',r.by?esc(nm(r.by)):'Not recorded (older trace)']);
+ rows.push([curKind==='dm'?'Started':'Created',esc(dt(r.ts))]);
+ rows.push(['Messages loaded',vis.length+(msgs.length>=200?' (latest 200)':'')]);
+ const last=vis[vis.length-1];
+ if(last)rows.push(['Last message',esc(new Date(last.ts).toLocaleString([],{day:'numeric',month:'short',hour:'numeric',minute:'2-digit'}))+' by '+esc(last.uid===me.uid?'You':(last.name||'Someone'))]);
+ const cnt={};vis.forEach(m=>{const c=cnt[m.uid]||(cnt[m.uid]={n:0,name:m.uid===me.uid?'You':(m.name||'Someone')});c.n++});
+ const ppl=Object.values(cnt).sort((a,b)=>b.n-a.n);
+ $('pc').innerHTML='<h3>'+(curKind==='dm'?'\u{1F512} ':'')+esc(r.name)+'</h3><div class="dl">'+rows.map(x=>'<div class="drow"><span>'+x[0]+'</span><span>'+x[1]+'</span></div>').join('')+'</div>'
+  +'<h4>Who has written here</h4><div class="dl">'+(ppl.length?ppl.map(p=>'<div class="drow"><span>'+esc(p.name)+'</span><span>'+p.n+' message'+(p.n===1?'':'s')+'</span></div>').join(''):'<div class="drow"><span>No messages yet</span><span></span></div>')+'</div>'
+  +'<div class="prow">'+(ws&&curKind==='room'?'<button class="btn" id="cig" type="button">Group settings</button>':'')+'<button class="btn" id="cix" type="button">Close</button></div>';
+ $('pm').style.display='flex';$('cix').onclick=closePm;if($('cig'))$('cig').onclick=()=>{closePm();$('wset').click()}}
 async function openPeople(){
  $('pc').innerHTML='<h3>New private chat</h3><input id="pq" placeholder="Search by name"><div id="pl" class="pl"><p class="pb">Loading...</p></div><button class="btn" id="ppx" type="button">Close</button>';
  $('pm').style.display='flex';$('ppx').onclick=closePm;
@@ -491,6 +536,7 @@ async function startDm(uid,name){
   closePm();if(!dms.some(x=>x.id===id))dms.push({id,other:uid,name});open(id,'dm')}
  catch(e){alert('Could not start chat: '+(e.code||e.message))}}
 log.addEventListener('click',e=>{
+ const tm=e.target.closest('time');if(tm&&tm.textContent){const row=tm.closest('.msg');if(row&&row.dataset.id){showMsgInfo(row.dataset.id);return}}
  const c=e.target.closest('.chip');if(c){toggleReact(c.dataset.id,+c.dataset.i);return}
  const a=e.target.closest('.act');if(a){if(a.dataset.a==='reply')startReply(a.dataset.id);else pickReact(a.dataset.id);return}
  const x=e.target.closest('.del');
