@@ -48,10 +48,12 @@ const HCSS=`#pc:has(.hubw){max-width:580px;padding:0;gap:0;overflow:hidden;displ
 .hcard{display:grid;gap:10px;border:1px solid var(--line);border-radius:16px;padding:14px 16px;background:color-mix(in srgb,var(--paper) 72%,transparent);box-shadow:0 12px 24px -22px rgba(23,35,63,.6)}
 .gcard{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--line);padding-top:10px}.gcard:first-of-type{border-top:0;padding-top:0}.gcard small{display:block;color:var(--pencil);font-size:12px}.gact{display:flex;gap:6px}.gact .btn{padding:7px 12px;font-size:13px}
 .tips{margin:0;padding:0;list-style:none;display:grid;gap:8px}.tips li{display:flex;gap:10px;align-items:center;font-size:14px}.tips b{min-width:52px;text-align:center;border:1px solid var(--line);border-radius:8px;padding:2px 6px;background:var(--paper);font-size:13px}
+.fbr{display:flex;gap:8px}.fbr button{flex:1;font-size:32px;line-height:1;padding:10px 0;border:2px solid transparent;background:var(--paper);border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:transform .15s}.fbr button small{font:600 11px var(--ui);color:var(--pencil)}.fbr button:hover{transform:translateY(-2px)}.fbr button.on{border-color:var(--margin);background:color-mix(in srgb,var(--margin) 10%,var(--paper));transform:scale(1.04)}
+.thx{text-align:center;padding:26px 16px;justify-items:center}.thx .big{font-size:54px;line-height:1}
 @media (max-width:520px){.hbanner{flex-direction:column;align-items:flex-start;gap:12px;padding-left:30px}.hav .pav{width:72px;height:72px;font-size:30px}}`;
 document.head.insertAdjacentHTML('beforeend','<style>'+HCSS+'</style>');
 let hubTab='profile';
-const HTABS=[['profile','Profile'],['settings','Settings'],['privacy','Privacy'],['groups','Groups'],['about','About']];
+const HTABS=[['profile','Profile'],['settings','Settings'],['privacy','Privacy'],['groups','Groups'],['feedback','Feedback'],['about','About']];
 function openHub(tab){
  hubTab=tab||hubTab;const p=prof||{},n=me.displayName||p.name||'You';
  const joined=p.joined?'<span>Joined '+esc(new Date(p.joined).toLocaleDateString([],{month:'short',year:'numeric'}))+'</span>':'';
@@ -59,7 +61,7 @@ function openHub(tab){
   +'<nav class="htabs" role="tablist">'+HTABS.map(t=>'<button type="button" role="tab" data-t="'+t[0]+'" class="'+(t[0]===hubTab?'on':'')+'">'+t[1]+'</button>').join('')+'</nav><div class="hbody" id="hubc"></div></div>';
  $('pm').style.display='flex';$('hx').onclick=closePm;
  $('pc').querySelector('.htabs').onclick=e=>{const b=e.target.closest('button');if(b)openHub(b.dataset.t)};
- if(hubTab==='profile')editProfile();else if(hubTab==='groups')renderGroups();else if(hubTab==='about')renderAbout();else renderSettings(hubTab)}
+ if(hubTab==='profile')editProfile();else if(hubTab==='groups')renderGroups();else if(hubTab==='about')renderAbout();else if(hubTab==='feedback')renderFeedback();else renderSettings(hubTab)}
 function renderSettings(part){const B=box();
  const seg=(key,opts)=>'<div class="seg" data-k="'+key+'">'+opts.map(o=>'<button type="button" data-v="'+o[0]+'"'+(String(prefs[key])===o[0]?' class="on"':'')+'>'+o[1]+'</button>').join('')+'</div>';
  if(part==='settings'){
@@ -97,6 +99,26 @@ function renderGroups(){const B=box();
   if(g){switchWs(g.dataset.id);closePm();return}
   if(m){switchWs(m.dataset.id);closePm();setTimeout(()=>$('wset').click(),60);return}
   if(e.target.closest('#gnew')){closePm();setTimeout(()=>$('wnew').click(),60)}}}
+function renderFeedback(){const B=box();let rate=0,kind='Idea';
+ const RT=[['1','\u{1F61E}','Bad'],['2','\u{1F610}','Okay'],['3','\u{1F642}','Good'],['4','\u{1F60D}','Love it']],KD=['Bug','Idea','Something I like','Other'];
+ B.innerHTML='<div class="hcard"><h4>How is TraceBook for you?</h4><div class="fbr" id="fbr">'+RT.map(r=>'<button type="button" data-r="'+r[0]+'" aria-label="'+r[2]+'">'+r[1]+'<small>'+r[2]+'</small></button>').join('')+'</div></div>'
+  +'<div class="hcard"><h4>What is it about?</h4><div class="seg" id="fbk" style="flex-wrap:wrap">'+KD.map(k=>'<button type="button" data-v="'+esc(k)+'"'+(k===kind?' class="on"':'')+'>'+esc(k)+'</button>').join('')+'</div></div>'
+  +'<div class="hcard"><h4>Tell us more</h4><textarea id="fbt" rows="4" maxlength="500" placeholder="What happened? What would make it better?" style="max-height:none"></textarea><small class="pb"><span id="fbc">0</span>/500</small></div>'
+  +'<button class="btn primary" id="fbs" type="button" disabled>Send feedback</button><p class="pb">Your name is attached so we can reply. Thank you, this really helps!</p>';
+ $('fbr').onclick=e=>{const b=e.target.closest('button');if(!b)return;rate=+b.dataset.r;
+  $('fbr').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));$('fbs').disabled=false};
+ $('fbk').onclick=e=>{const b=e.target.closest('button');if(!b)return;kind=b.dataset.v;
+  $('fbk').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))};
+ $('fbt').oninput=()=>{$('fbc').textContent=$('fbt').value.length};
+ $('fbs').onclick=async()=>{
+  let last=0;try{last=+localStorage.getItem('tb.fbts')||0}catch(e){}
+  if(Date.now()-last<30000){toast('Please wait a few seconds before sending again.');return}
+  $('fbs').disabled=true;
+  try{await addDoc(collection(db,'feedback'),{uid:me.uid,name:me.displayName||prof.name||'',email:me.email||'',rating:rate,kind,text:$('fbt').value.trim().slice(0,500),ts:Date.now()});
+   try{localStorage.setItem('tb.fbts',String(Date.now()))}catch(e){}
+   B.innerHTML='<div class="hcard thx"><div class="big">\u{1F389}</div><h4>Thank you!</h4><p class="pb">Your feedback was sent. It really helps make TraceBook better.</p><button class="btn" id="fbd" type="button">Close</button></div>';
+   $('fbd').onclick=closePm}
+  catch(e){$('fbs').disabled=false;alert('Could not send feedback: '+(e.code||e.message))}}}
 function renderAbout(){const B=box();
  B.innerHTML='<div class="hcard"><h4>Account</h4><p class="pb">'+esc(me.email||'')+'</p><button class="btn" id="sso" type="button" style="color:var(--margin)">Sign out</button></div>'
   +'<div class="hcard"><h4>Quick tips</h4><ul class="tips"><li><b>\u263A</b> React to a message</li><li><b>\u21A9</b> Reply to a message</li><li><b>\u{1F50D}</b> Search inside a chat</li><li><b>+ Group</b> Make a private space and invite people</li></ul></div>'
@@ -137,8 +159,8 @@ $('gr').onclick=async()=>{const em=$('ge').value.trim();if(!em){err('Type your e
 
 /* ---------- chat ---------- */
 function chip(){const a=$('acct'),n=me.displayName||me.email||'You';
- a.innerHTML=((prof.pic||me.photoURL)?'<img class="av" alt="" referrerpolicy="no-referrer" src="'+esc(prof.pic||me.photoURL)+'">':'<span class="av" style="background:'+esc(prof.color||'')+'">'+esc(n.charAt(0).toUpperCase())+'</span>')+'<div><b>'+esc(n)+'</b><small>'+esc((prof.mood?prof.mood+' ':'')+(prof.bio||me.email||''))+'</small></div><div class="ab"><button id="hub" type="button">My space</button></div>';
- $('hub').onclick=()=>openHub('profile')}
+ a.innerHTML=((prof.pic||me.photoURL)?'<img class="av" alt="" referrerpolicy="no-referrer" src="'+esc(prof.pic||me.photoURL)+'">':'<span class="av" style="background:'+esc(prof.color||'')+'">'+esc(n.charAt(0).toUpperCase())+'</span>')+'<div><b>'+esc(n)+'</b><small>'+esc((prof.mood?prof.mood+' ':'')+(prof.bio||me.email||''))+'</small></div><div class="ab"><button id="hub" type="button">My space</button><button id="hfb" type="button">Feedback</button></div>';
+ $('hub').onclick=()=>openHub('profile');$('hfb').onclick=()=>openHub('feedback')}
 async function doSignOut(){try{await setDoc(doc(db,'users',me.uid),{lastSeen:0},{merge:true})}catch(e){}signOut(auth)}
 const shown=()=>msgs.filter(m=>!blocked.has(m.uid));
 function renderSecbar(){
