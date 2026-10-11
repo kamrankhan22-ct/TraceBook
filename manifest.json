@@ -1,0 +1,16 @@
+{
+  "name": "TraceBook",
+  "short_name": "TraceBook",
+  "description": "Conversations, kept on the page. A chat app that looks like a ruled notebook.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#17233F",
+  "theme_color": "#17233F",
+  "icons": [
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
