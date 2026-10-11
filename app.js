@@ -409,6 +409,7 @@ let prof={};
 const closePm=()=>{$('pm').style.display='none'};
 $('pm').addEventListener('click',e=>{if(e.target.id==='pm')closePm()});
 const avatar=p=>(p.pic||p.photoURL)?'<img class="pav" alt="" referrerpolicy="no-referrer" src="'+esc(p.pic||p.photoURL)+'">':'<span class="pav" style="background:'+esc(p.color||COLORS[0])+'">'+esc((p.name||'?').charAt(0).toUpperCase())+'</span>';
+const joinTxt=ts=>{const d=Math.floor((Date.now()-ts)/864e5);return new Date(ts).toLocaleDateString([],{day:'numeric',month:'short',year:'numeric'})+(d<1?' (today)':d<31?' ('+d+' day'+(d===1?'':'s')+' ago)':'')};
 const MOODS=['😀','😎','📚','☕','🎧','🌙','🔥','🌱'];
 const safeLink=u=>/^https:\/\/[^\s"'<>]+$/i.test(u||'')?u:'';
 async function loadProf(){
@@ -416,6 +417,7 @@ async function loadProf(){
   if(d.exists())prof=d.data();
   else{prof={name:me.displayName||(me.email||'').split('@')[0]||'Someone',bio:'',color:COLORS[0],photoURL:me.photoURL||'',pic:'',mood:'',pronouns:'',city:'',link:'',tags:'',joined:Date.now()};await setDoc(r,prof)}
  }catch(e){prof={}}
+ if(prof.name&&!prof.joined){const c=Date.parse((me.metadata||{}).creationTime)||Date.now();prof.joined=c;setDoc(doc(db,'users',me.uid),{joined:c},{merge:true}).catch(()=>{})}
  pcache[me.uid]=prof;asked.add(me.uid);chip();renderLog();beat()}
 async function showCard(uid,fallback){
  if(uid===me.uid)return openHub('profile');
@@ -433,7 +435,7 @@ async function showCard(uid,fallback){
   +(mutual.length?'<p class="pb"><b>Groups together:</b> '+esc(mutual.join(', '))+'</p>':'')
   +(cnt?'<p class="pb">'+cnt+' message'+(cnt===1?'':'s')+' in this chat</p>':'')
   +(isOn(uid)?'<small class="pb" style="color:#2E9E5B">Online now</small>':(p.lastSeen>0?'<small class="pb">Last seen '+ago(p.lastSeen)+'</small>':''))
-  +(p.joined?'<small class="pb">Joined '+new Date(p.joined).toLocaleDateString([],{month:'long',year:'numeric'})+'</small>':'')
+  +(p.joined?'<small class="pb">Joined '+joinTxt(p.joined)+'</small>':'')
   +'<div class="prow"><button class="btn" id="pbk" type="button">'+(blocked.has(uid)?'Unblock':'Block')+'</button><button class="btn" id="pcl" type="button">Close</button></div>';
  $('pcl').onclick=closePm;
  $('pbk').onclick=async()=>{try{
