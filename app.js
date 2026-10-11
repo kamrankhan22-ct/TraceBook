@@ -1,5 +1,5 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import {getAuth,onAuthStateChanged,signInWithPopup,signInWithRedirect,getRedirectResult,getAdditionalUserInfo,GoogleAuthProvider,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {getAuth,onAuthStateChanged,signInWithPopup,signInWithRedirect,getRedirectResult,getAdditionalUserInfo,GoogleAuthProvider,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail,deleteUser,reauthenticateWithPopup,reauthenticateWithCredential,EmailAuthProvider} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {getFirestore,collection,addDoc,onSnapshot,query,orderBy,limit,doc,getDoc,setDoc,deleteDoc,getDocs,writeBatch,where,updateDoc,arrayUnion,arrayRemove} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
 
@@ -15,7 +15,7 @@ if(!firebaseConfig.apiKey||firebaseConfig.apiKey.startsWith('YOUR_')){
  $('gb').style.display='none';throw new Error('Missing Firebase config');
 }
 const fb=initializeApp(firebaseConfig),auth=getAuth(fb),db=getFirestore(fb);
-let me=null,rooms=[],cur=null,msgs=[],unsubR=null,unsubM=null,creating=false,dms=[],curKind='room',unsubD=null,unsubO=null,unsubB=null,blocked=new Set(),replyTo=null,unread={},watch={},notified=new Set(),started=Date.now(),swreg=null,ws='',myWs=[],unsubW=null,roomQ='',msgQ='',secTab='public',gview='traces';
+let me=null,rooms=[],cur=null,msgs=[],unsubR=null,unsubM=null,creating=false,dms=[],curKind='room',unsubD=null,unsubO=null,unsubB=null,blocked=new Set(),replyTo=null,unread={},watch={},notified=new Set(),started=Date.now(),swreg=null,ws='',myWs=[],unsubW=null,roomQ='',msgQ='',secTab='public',gview='traces',deleting=false;
 const rq=()=>roomQ.trim().toLowerCase(),mqs=()=>msgQ.trim().toLowerCase();
 const rcol=()=>ws?collection(db,'workspaces',ws,'rooms'):collection(db,'rooms');
 const rdoc=id=>doc(rcol(),id);
@@ -126,8 +126,10 @@ function renderAbout(){const B=box();
  B.innerHTML='<div class="hcard"><h4>Account</h4><p class="pb">'+esc(me.email||'')+'</p><button class="btn" id="sso" type="button" style="color:var(--margin)">Sign out</button></div>'
   +'<div class="hcard"><h4>Quick tips</h4><ul class="tips"><li><b>\u263A</b> React to a message</li><li><b>\u21A9</b> Reply to a message</li><li><b>\u{1F50D}</b> Search inside a chat</li><li><b>\u2139\uFE0F</b> See details of a chat</li><li><b>9:15</b> Tap a message time for its details</li><li><b>+ Group</b> Make a private space and invite people</li></ul></div>'
   +'<div class="hcard"><h4>Install on your phone</h4><p class="pb">Open your browser menu and choose <b>Add to Home screen</b>. TraceBook then opens like an app.</p></div>'
-  +'<div class="hcard"><h4>About</h4><p class="pb">TraceBook \u00b7 Conversations, kept on the page.<br>Built on a phone.</p></div>';
- $('sso').onclick=()=>{closePm();doSignOut()}}
+  +'<div class="hcard"><h4>About</h4><p class="pb">TraceBook \u00b7 Conversations, kept on the page.<br>Built on a phone.</p></div>'
+  +'<div class="hcard"><h4>Legal and safety</h4><p class="pb"><a href="privacy.html" target="_blank" rel="noopener">Privacy policy</a> \u00b7 <a href="terms.html" target="_blank" rel="noopener">Terms</a> \u00b7 <a href="delete-account.html" target="_blank" rel="noopener">Delete account help</a></p><p class="pb">To report a message or a person, tap a message time, or tap a name, then choose Report.</p></div>'
+  +'<div class="hcard"><h4>Danger zone</h4><p class="pb">Delete your account and the data that comes with it.</p><button class="btn" id="dac" type="button" style="color:var(--margin)">Delete my account</button></div>';
+ $('sso').onclick=()=>{closePm();doSignOut()};$('dac').onclick=openDeleteAccount}
 
 /* ---------- sign in ---------- */
 const err=m=>{$('ger').textContent=m||''};
@@ -393,7 +395,7 @@ document.body.insertAdjacentHTML('beforeend','<div id="pm" role="dialog" aria-la
 const pcache={},asked=new Set(),seen={};
 const isOn=u=>!!seen[u]&&Date.now()-seen[u]<300000;
 const ago=ts=>{const m=Math.floor((Date.now()-ts)/60000);return m<1?'just now':m<60?m+' min ago':m<1440?Math.floor(m/60)+' h ago':Math.floor(m/1440)+' d ago'};
-function beat(){if(!me||document.visibilityState!=='visible')return;
+function beat(){if(!me||deleting||document.visibilityState!=='visible')return;
  setDoc(doc(db,'users',me.uid),{lastSeen:prof.hideOnline?0:Date.now()},{merge:true}).catch(()=>{})}
 setInterval(beat,120000);document.addEventListener('visibilitychange',beat);
 setInterval(()=>{if(me)renderRooms()},60000);
@@ -436,7 +438,8 @@ async function showCard(uid,fallback){
   +(cnt?'<p class="pb">'+cnt+' message'+(cnt===1?'':'s')+' in this chat</p>':'')
   +(isOn(uid)?'<small class="pb" style="color:#2E9E5B">Online now</small>':(p.lastSeen>0?'<small class="pb">Last seen '+ago(p.lastSeen)+'</small>':''))
   +(p.joined?'<small class="pb">Joined '+joinTxt(p.joined)+'</small>':'')
-  +'<div class="prow"><button class="btn" id="pbk" type="button">'+(blocked.has(uid)?'Unblock':'Block')+'</button><button class="btn" id="pcl" type="button">Close</button></div>';
+  +'<div class="prow"><button class="btn" id="pbk" type="button">'+(blocked.has(uid)?'Unblock':'Block')+'</button><button class="btn" id="prp" type="button">Report</button><button class="btn" id="pcl" type="button">Close</button></div>';
+ $('prp').onclick=()=>openReport({uid,name:p.name});
  $('pcl').onclick=closePm;
  $('pbk').onclick=async()=>{try{
   if(blocked.has(uid)){await deleteDoc(doc(db,'blocks',me.uid+'_'+uid))}
@@ -498,9 +501,10 @@ async function showMsgInfo(id){
   +'<div class="drow"><span>Length</span><span>'+(m.text||'').length+' characters</span></div>'
   +(m.reply?'<div class="drow"><span>Reply to</span><span>'+esc((m.reply.name||'')+': '+(m.reply.text||''))+'</span></div>':'')+'</div>'
   +(rxRows?'<h4>Reactions</h4><div class="dl">'+rxRows+'</div>':'<p class="pb">No reactions yet.</p>')
-  +'<div class="prow"><button class="btn" id="mix" type="button">Close</button><button class="btn" id="mir" type="button">Reply</button>'+(m.uid===me.uid?'<button class="btn" id="mid" type="button" style="color:var(--margin)">Delete</button>':'')+'</div>';
+  +'<div class="prow"><button class="btn" id="mix" type="button">Close</button><button class="btn" id="mir" type="button">Reply</button>'+(m.uid!==me.uid?'<button class="btn" id="mrp" type="button">Report</button>':'')+(m.uid===me.uid?'<button class="btn" id="mid" type="button" style="color:var(--margin)">Delete</button>':'')+'</div>';
  $('pm').style.display='flex';$('mix').onclick=closePm;
  $('mir').onclick=()=>{closePm();startReply(id)};
+ if($('mrp'))$('mrp').onclick=()=>openReport({uid:m.uid,name:nm(m.uid),msg:m.text,msgId:id});
  if($('mid'))$('mid').onclick=()=>{if(!confirm('Delete this message?'))return;closePm();deleteDoc(doc(mcol(cur,curKind),id)).catch(z=>alert('Could not delete: '+(z.code||z.message)))}}
 async function showChatInfo(){
  const r=(curKind==='dm'?dms:rooms).find(x=>x.id===cur);if(!r)return;
@@ -522,6 +526,56 @@ async function showChatInfo(){
   +'<h4>Who has written here</h4><div class="dl">'+(ppl.length?ppl.map(p=>'<div class="drow"><span>'+esc(p.name)+'</span><span>'+p.n+' message'+(p.n===1?'':'s')+'</span></div>').join(''):'<div class="drow"><span>No messages yet</span><span></span></div>')+'</div>'
   +'<div class="prow">'+(ws&&curKind==='room'?'<button class="btn" id="cig" type="button">Group settings</button>':'')+'<button class="btn" id="cix" type="button">Close</button></div>';
  $('pm').style.display='flex';$('cix').onclick=closePm;if($('cig'))$('cig').onclick=()=>{closePm();$('wset').click()}}
+const REASONS=['Spam','Harassment or bullying','Hate or abuse','Sexual content','Self-harm','Other'];
+function openReport(t){
+ let reason='';
+ $('pc').innerHTML='<h3>Report</h3><p class="pb">Tell us what is wrong. Your report is private and goes only to the TraceBook team.</p>'
+  +'<div class="hcard"><h4>'+esc(t.msg?'Message from '+t.name:'Person: '+t.name)+'</h4>'+(t.msg?'<div class="mbox">'+esc(t.msg.slice(0,200))+'</div>':'')+'</div>'
+  +'<div class="seg" id="rsn" style="flex-wrap:wrap">'+REASONS.map(r=>'<button type="button" data-v="'+esc(r)+'">'+esc(r)+'</button>').join('')+'</div>'
+  +'<label>More detail (optional)<textarea id="rnt" rows="3" maxlength="200" style="max-height:none" placeholder="What happened?"></textarea></label>'
+  +'<label class="chk"><input type="checkbox" id="rbk" checked> Also block '+esc(t.name||'this person')+'</label>'
+  +'<div class="prow"><button class="btn" id="rcx2" type="button">Cancel</button><button class="btn primary" id="rsd" type="button" disabled>Send report</button></div>';
+ $('pm').style.display='flex';$('rcx2').onclick=closePm;
+ $('rsn').onclick=e=>{const b=e.target.closest('button');if(!b)return;reason=b.dataset.v;
+  $('rsn').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));$('rsd').disabled=false};
+ $('rsd').onclick=async()=>{$('rsd').disabled=true;
+  try{await addDoc(collection(db,'reports'),{by:me.uid,byName:me.displayName||prof.name||'',target:t.uid,targetName:t.name||'',msgId:t.msgId||'',text:(t.msg||'').slice(0,300),chat:(curKind==='dm'?'dm/'+cur:(ws?'ws/'+ws+'/room/'+cur:'room/'+cur)),reason,note:$('rnt').value.trim().slice(0,200),ts:Date.now()});
+   if($('rbk').checked)await setDoc(doc(db,'blocks',me.uid+'_'+t.uid),{by:me.uid,target:t.uid,ts:Date.now()});
+   closePm();toast('Report sent. Thank you.')}
+  catch(e){$('rsd').disabled=false;alert('Could not send report: '+(e.code||e.message))}}}
+async function delWhere(q){const snap=await getDocs(q);for(let i=0;i<snap.docs.length;i+=400){const b=writeBatch(db);snap.docs.slice(i,i+400).forEach(d=>b.delete(d.ref));await b.commit()}}
+async function wipeMine(){
+ const mine=c=>delWhere(query(c,where('uid','==',me.uid)));
+ const pr=await getDocs(collection(db,'rooms'));for(const r of pr.docs)await mine(collection(r.ref,'messages'));
+ for(const w of myWs){
+  if(w.owner===me.uid){await deleteWs(w);continue}
+  const rs=await getDocs(collection(db,'workspaces',w.id,'rooms'));for(const r of rs.docs)await mine(collection(r.ref,'messages'));
+  await updateDoc(doc(db,'workspaces',w.id),{members:arrayRemove(me.uid)})}
+ for(const d of dms)await mine(collection(db,'dms',d.id,'messages'));
+ await delWhere(query(collection(db,'blocks'),where('by','==',me.uid)));
+ await delWhere(query(collection(db,'feedback'),where('uid','==',me.uid)));
+ await deleteDoc(doc(db,'users',me.uid))}
+function openDeleteAccount(){
+ const pw=((auth.currentUser.providerData||[])[0]||{}).providerId==='password';
+ $('pc').innerHTML='<h3>Delete your account?</h3><p class="pb">This cannot be undone. We will delete:</p>'
+  +'<ul class="tips" style="gap:6px"><li>Your profile, photo and settings</li><li>Your messages in every chat you are part of</li><li>Your blocks and the feedback you sent</li><li>Groups you own, with everything inside them</li><li>Your sign-in account</li></ul>'
+  +'<p class="pb">Reactions you left and reports may stay, without your name.</p>'
+  +(pw?'<label>Your password<input id="dpw" type="password" autocomplete="current-password"></label>':'<p class="pb">You will be asked to sign in with Google once more to confirm.</p>')
+  +'<label>Type DELETE to confirm<input id="dcf" autocomplete="off" placeholder="DELETE"></label><p class="pb" id="dst"></p>'
+  +'<div class="prow"><button class="btn" id="dcx" type="button">Cancel</button><button class="btn primary" id="ddl" type="button" style="background:var(--margin)" disabled>Delete everything</button></div>';
+ $('pm').style.display='flex';$('dcx').onclick=closePm;
+ $('dcf').oninput=()=>{$('ddl').disabled=$('dcf').value.trim()!=='DELETE'};
+ $('ddl').onclick=async()=>{$('ddl').disabled=true;$('dcx').disabled=true;const st=x=>{$('dst').textContent=x};
+  try{const u=auth.currentUser;
+   st('Confirming it is you...');
+   if(pw)await reauthenticateWithCredential(u,EmailAuthProvider.credential(u.email,$('dpw').value));
+   else await reauthenticateWithPopup(u,gprov);
+   deleting=true;
+   st('Deleting your messages and data...');await wipeMine();
+   st('Deleting your sign-in account...');await deleteUser(u);
+   closePm();toast('Your account was deleted.')}
+  catch(e){deleting=false;$('dcx').disabled=false;$('ddl').disabled=false;
+   st(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential'?'That password is not correct.':'Could not finish: '+(e.code||e.message))}}}
 async function openPeople(){
  $('pc').innerHTML='<h3>New private chat</h3><input id="pq" placeholder="Search by name"><div id="pl" class="pl"><p class="pb">Loading...</p></div><button class="btn" id="ppx" type="button">Close</button>';
  $('pm').style.display='flex';$('ppx').onclick=closePm;
