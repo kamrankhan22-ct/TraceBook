@@ -116,12 +116,13 @@ function renderFeedback(){const B=box();let rate=0,kind='Idea';
  $('fbk').onclick=e=>{const b=e.target.closest('button');if(!b)return;kind=b.dataset.v;
   $('fbk').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))};
  $('fbt').oninput=()=>{$('fbc').textContent=$('fbt').value.length};
+ if(fbPreset){const pb=$('fbr').querySelector('[data-r="'+fbPreset+'"]');fbPreset=0;if(pb)pb.click()}
  $('fbs').onclick=async()=>{
   let last=0;try{last=+localStorage.getItem('tb.fbts')||0}catch(e){}
   if(Date.now()-last<30000){toast('Please wait a few seconds before sending again.');return}
   $('fbs').disabled=true;
   try{await addDoc(collection(db,'feedback'),{uid:me.uid,name:me.displayName||prof.name||'',email:me.email||'',rating:rate,kind,text:$('fbt').value.trim().slice(0,500),ts:Date.now()});
-   try{localStorage.setItem('tb.fbts',String(Date.now()))}catch(e){}
+   try{localStorage.setItem('tb.fbts',String(Date.now()));localStorage.setItem('tb.fbdone','1')}catch(e){}
    B.innerHTML='<div class="hcard thx"><div class="big">\u{1F389}</div><h4>Thank you!</h4><p class="pb">Your feedback was sent. It really helps make TraceBook better.</p><button class="btn" id="fbd" type="button">Close</button></div>';
    $('fbd').onclick=closePm}
   catch(e){$('fbs').disabled=false;alert('Could not send feedback: '+(e.code||e.message))}}}
@@ -316,6 +317,7 @@ $('wset').onclick=async()=>{const w=wsInfo();if(!w)return;
 function send(){const v=t.value.trim();if(!v||!cur)return;
  const data={uid:me.uid,name:me.displayName||me.email||'Someone',text:v,ts:Date.now()};if(replyTo)data.reply=replyTo;
  addDoc(mcol(cur,curKind),data).catch(()=>toast('Message could not be sent.'));replyTo=null;showReply();
+ lsSet('tb.sent',String((+lsGet('tb.sent')||0)+1));
  t.value='';grow();s.disabled=true}
 function grow(){t.style.height='auto';t.style.height=Math.min(t.scrollHeight,140)+'px'}
 t.addEventListener('input',()=>{s.disabled=!t.value.trim();grow()});
@@ -354,6 +356,22 @@ $('dt').onclick=async()=>{
  catch(e){alert('Could not delete: '+(e.code||e.message))}
  $('dt').disabled=false};
 
+/* ---------- gentle feedback prompt ---------- */
+let fbPreset=0;
+document.head.insertAdjacentHTML('beforeend','<style>#fbp{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom,0px));z-index:9;width:min(92vw,380px);background:var(--paper2);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--margin);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow);animation:rise .4s both}#fbp[hidden]{display:none}#fbp b{font:700 21px var(--serif);display:block;margin-bottom:10px}#fbp .fe{display:flex;gap:8px}#fbp .fe button{flex:1;font-size:26px;border:1px solid var(--line);background:var(--paper);border-radius:12px;padding:6px 0;cursor:pointer;transition:transform .15s}#fbp .fe button:hover{transform:translateY(-2px)}#fbp .fx{display:flex;justify-content:space-between;align-items:center;margin-top:8px}#fbp .fx button{border:0;background:none;color:var(--pencil);font:inherit;font-size:13px;cursor:pointer;padding:2px 0}</style>');
+document.body.insertAdjacentHTML('beforeend','<div id="fbp" hidden></div>');
+const lsGet=k=>{try{return localStorage.getItem(k)}catch(e){return null}},lsSet=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+function fbDue(){
+ if(lsGet('tb.fbdone')||(+lsGet('tb.fbsn')||0)>=3||Date.now()<(+lsGet('tb.fbsnooze')||0))return false;
+ const days=prof.joined?(Date.now()-prof.joined)/864e5:0;
+ return days>=3||(+lsGet('tb.sent')||0)>=5}
+function maybeAskFeedback(){
+ const el=$('fbp');if(!el||!me||!el.hidden||$('pm').style.display==='flex'||!fbDue())return;
+ el.hidden=false;
+ el.innerHTML='<b>How is TraceBook so far?</b><div class="fe">'+[['1','\u{1F61E}'],['2','\u{1F610}'],['3','\u{1F642}'],['4','\u{1F60D}']].map(r=>'<button type="button" data-r="'+r[0]+'" aria-label="Rate '+r[0]+' out of 4">'+r[1]+'</button>').join('')+'</div><div class="fx"><span class="pb" style="font-size:12px">Takes 10 seconds</span><button type="button" id="fbn">Not now</button></div>';
+ el.querySelector('.fe').onclick=e=>{const b=e.target.closest('button');if(!b)return;el.hidden=true;fbPreset=+b.dataset.r;openHub('feedback')};
+ $('fbn').onclick=()=>{el.hidden=true;lsSet('tb.fbsn',String((+lsGet('tb.fbsn')||0)+1));lsSet('tb.fbsnooze',String(Date.now()+7*864e5))}}
+setInterval(maybeAskFeedback,45000);
 /* ---------- reactions, replies, notifications ---------- */
 $('f').insertAdjacentHTML('beforebegin','<div id="rp" hidden></div>');
 document.head.insertAdjacentHTML('beforeend','<style>#rp{padding:8px 20px;background:var(--paper2);border-top:1px solid var(--line);font-size:14px;color:var(--pencil);display:flex;justify-content:space-between;gap:10px;align-items:center}#rp[hidden]{display:none}#rp span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#rp button{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}.quote{height:34px;line-height:34px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--pencil);font:14px/34px var(--ui);border-left:3px solid var(--line);padding-left:8px}.rxs{display:flex;gap:6px;height:34px;align-items:center;overflow-x:auto}.chip{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:99px;padding:0 10px;font:inherit;font-size:14px;height:26px;cursor:pointer;flex:none}.chip.on{border-color:var(--me)}.act{border:0;background:none;color:var(--pencil);font-size:16px;cursor:pointer;margin-left:6px;padding:0 4px;line-height:inherit;opacity:.65}.badge{display:inline-block;background:var(--margin);color:#fff;border-radius:99px;font-size:11px;font-weight:800;padding:1px 7px;margin-left:8px}</style>');
@@ -423,7 +441,7 @@ async function loadProf(){
   else{prof={name:me.displayName||(me.email||'').split('@')[0]||'Someone',bio:'',color:COLORS[0],photoURL:me.photoURL||'',pic:'',mood:'',pronouns:'',city:'',link:'',tags:'',joined:Date.now()};await setDoc(r,prof)}
  }catch(e){prof={}}
  if(prof.name&&!prof.joined){const c=Date.parse((me.metadata||{}).creationTime)||Date.now();prof.joined=c;setDoc(doc(db,'users',me.uid),{joined:c},{merge:true}).catch(()=>{})}
- pcache[me.uid]=prof;asked.add(me.uid);chip();renderLog();beat()}
+ pcache[me.uid]=prof;asked.add(me.uid);chip();renderLog();beat();setTimeout(maybeAskFeedback,25000)}
 async function showCard(uid,fallback){
  if(uid===me.uid)return openHub('profile');
  $('pc').innerHTML='<p class="pb">Loading...</p>';$('pm').style.display='flex';
