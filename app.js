@@ -16,6 +16,7 @@ if(!firebaseConfig.apiKey||firebaseConfig.apiKey.startsWith('YOUR_')){
 }
 const fb=initializeApp(firebaseConfig),auth=getAuth(fb),db=getFirestore(fb);
 setPersistence(auth,browserLocalPersistence).catch(()=>{});
+try{const u=new URL(location.href),r=u.searchParams.get('ref');if(r){localStorage.setItem('tb.ref',r.slice(0,64));u.searchParams.delete('ref');history.replaceState({},'',u.pathname+u.search+u.hash)}}catch(e){}
 function hideSplash(){const sp=document.getElementById('splash');if(sp){sp.classList.add('out');setTimeout(()=>sp.remove(),400)}}
 setTimeout(()=>{if(document.getElementById('splash')){hideSplash();if(!auth.currentUser)document.getElementById('gate').style.display='flex'}},6000);
 let me=null,rooms=[],cur=null,msgs=[],unsubR=null,unsubM=null,creating=false,dms=[],curKind='room',unsubD=null,unsubO=null,unsubB=null,blocked=new Set(),replyTo=null,unread={},watch={},notified=new Set(),started=Date.now(),swreg=null,ws='',myWs=[],unsubW=null,roomQ='',msgQ='',secTab='public',gview='traces',deleting=false;
@@ -408,6 +409,8 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').then(()=>navigator.serviceWorker.ready).then(r=>{swreg=r}).catch(()=>{});
 $('acct').insertAdjacentHTML('beforebegin','<button class="btn" id="nt" type="button" hidden>\u{1F514} Turn on notifications</button>');
 if('Notification' in window&&Notification.permission==='default')$('nt').hidden=false;
+$('acct').insertAdjacentHTML('beforebegin','<button class="btn" id="inv" type="button">\u{1F517} Invite friends</button>');
+$('inv').onclick=()=>openInvite();
 $('nt').onclick=async()=>{try{await Notification.requestPermission()}catch(e){}$('nt').hidden=true;toast(Notification.permission==='granted'?'Notifications are on.':'Notifications are blocked in your browser settings.')};
 
 /* ---------- profile ---------- */
@@ -438,7 +441,7 @@ const safeLink=u=>/^https:\/\/[^\s"'<>]+$/i.test(u||'')?u:'';
 async function loadProf(){
  try{const r=doc(db,'users',me.uid),d=await getDoc(r);
   if(d.exists())prof=d.data();
-  else{prof={name:me.displayName||(me.email||'').split('@')[0]||'Someone',bio:'',color:COLORS[0],photoURL:me.photoURL||'',pic:'',mood:'',pronouns:'',city:'',link:'',tags:'',joined:Date.now()};await setDoc(r,prof)}
+  else{prof={name:me.displayName||(me.email||'').split('@')[0]||'Someone',bio:'',color:COLORS[0],photoURL:me.photoURL||'',pic:'',mood:'',pronouns:'',city:'',link:'',tags:'',joined:Date.now(),invitedBy:(()=>{const x=lsGet('tb.ref')||'';return x&&x!==me.uid?x:''})()};await setDoc(r,prof);try{localStorage.removeItem('tb.ref')}catch(e){}}
  }catch(e){prof={}}
  if(prof.name&&!prof.joined){const c=Date.parse((me.metadata||{}).creationTime)||Date.now();prof.joined=c;setDoc(doc(db,'users',me.uid),{joined:c},{merge:true}).catch(()=>{})}
  pcache[me.uid]=prof;asked.add(me.uid);chip();renderLog();beat();setTimeout(maybeAskFeedback,25000)}
@@ -597,6 +600,29 @@ function openDeleteAccount(){
    closePm();toast('Your account was deleted.')}
   catch(e){deleting=false;$('dcx').disabled=false;$('ddl').disabled=false;
    st(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential'?'That password is not correct.':'Could not finish: '+(e.code||e.message))}}}
+async function copyText(t,msg){try{await navigator.clipboard.writeText(t);toast(msg||'Copied.')}catch(e){prompt('Copy this:',t)}}
+function waShare(text){window.open('https://wa.me/?text='+encodeURIComponent(text),'_blank','noopener')}
+async function nativeShare(text,url){
+ if(navigator.share){try{await navigator.share({title:'TraceBook',text,url});return}catch(e){if(e&&e.name==='AbortError')return}}
+ copyText(text+' '+url,'Message copied. Paste it anywhere.')}
+async function openInvite(){
+ const link=location.origin+'/?ref='+me.uid,msg='Join me on TraceBook, a chat app that looks like a ruled notebook.';
+ const gl=myWs.map(w=>({name:w.name,url:location.origin+'/?join='+w.code}));
+ $('pc').innerHTML='<h3>Invite friends</h3><p class="pb">Send your link. When a friend signs up with it, you will see them below.</p>'
+  +'<div class="hcard"><h4>TraceBook link</h4><label>Your link<input id="ivl" readonly></label><div class="prow"><button class="btn primary" id="ivs" type="button">Share</button><button class="btn" id="ivw" type="button">WhatsApp</button><button class="btn" id="ivc" type="button">Copy</button></div></div>'
+  +'<div class="hcard"><h4>Invite to a group</h4>'+(gl.length?gl.map((g,i)=>'<div class="gcard"><div><b>'+esc(g.name)+'</b><small>Private group invite</small></div><div class="gact"><button class="btn gw" data-i="'+i+'" type="button">WhatsApp</button><button class="btn gk" data-i="'+i+'" type="button">Copy</button></div></div>').join(''):'<p class="pb">Make a group in My space, Groups, then invite people into it.</p>')+'</div>'
+  +'<div class="hcard"><h4>Joined with your link</h4><div id="ivj" class="pb">Loading...</div></div><button class="btn" id="ivx" type="button">Close</button>';
+ $('pm').style.display='flex';$('ivx').onclick=closePm;$('ivl').value=link;
+ $('ivs').onclick=()=>nativeShare(msg,link);
+ $('ivw').onclick=()=>waShare(msg+' '+link);
+ $('ivc').onclick=()=>copyText(link,'Invite link copied.');
+ $('pc').onclick=e=>{const w=e.target.closest('.gw'),k=e.target.closest('.gk');
+  if(w){const g=gl[+w.dataset.i];waShare('Join my group "'+g.name+'" on TraceBook: '+g.url)}
+  if(k){copyText(gl[+k.dataset.i].url,'Group invite link copied.')}};
+ try{const snap=await getDocs(query(collection(db,'users'),where('invitedBy','==',me.uid),limit(30)));
+  const el=$('ivj');if(!el)return;
+  el.innerHTML=snap.empty?'No one yet. Share your link and ask a friend to sign up.':'<b>'+snap.size+' friend'+(snap.size===1?'':'s')+' joined:</b> '+esc(snap.docs.map(d=>d.data().name||'Someone').join(', '))
+ }catch(e){const el=$('ivj');if(el)el.textContent='Could not load this right now.'}}
 async function openPeople(){
  $('pc').innerHTML='<h3>New private chat</h3><input id="pq" placeholder="Search by name"><div id="pl" class="pl"><p class="pb">Loading...</p></div><button class="btn" id="ppx" type="button">Close</button>';
  $('pm').style.display='flex';$('ppx').onclick=closePm;
