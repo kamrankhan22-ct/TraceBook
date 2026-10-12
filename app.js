@@ -1,5 +1,5 @@
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import {getAuth,onAuthStateChanged,signInWithPopup,signInWithRedirect,getRedirectResult,getAdditionalUserInfo,GoogleAuthProvider,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail,deleteUser,reauthenticateWithPopup,reauthenticateWithCredential,EmailAuthProvider} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {getAuth,onAuthStateChanged,signInWithPopup,signInWithRedirect,getRedirectResult,getAdditionalUserInfo,GoogleAuthProvider,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail,setPersistence,browserLocalPersistence,deleteUser,reauthenticateWithPopup,reauthenticateWithCredential,EmailAuthProvider} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {getFirestore,collection,addDoc,onSnapshot,query,orderBy,limit,doc,getDoc,setDoc,deleteDoc,getDocs,writeBatch,where,updateDoc,arrayUnion,arrayRemove} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 import {firebaseConfig} from "./firebase-config.js";
 
@@ -15,6 +15,9 @@ if(!firebaseConfig.apiKey||firebaseConfig.apiKey.startsWith('YOUR_')){
  $('gb').style.display='none';throw new Error('Missing Firebase config');
 }
 const fb=initializeApp(firebaseConfig),auth=getAuth(fb),db=getFirestore(fb);
+setPersistence(auth,browserLocalPersistence).catch(()=>{});
+function hideSplash(){const sp=document.getElementById('splash');if(sp){sp.classList.add('out');setTimeout(()=>sp.remove(),400)}}
+setTimeout(()=>{if(document.getElementById('splash')){hideSplash();if(!auth.currentUser)document.getElementById('gate').style.display='flex'}},6000);
 let me=null,rooms=[],cur=null,msgs=[],unsubR=null,unsubM=null,creating=false,dms=[],curKind='room',unsubD=null,unsubO=null,unsubB=null,blocked=new Set(),replyTo=null,unread={},watch={},notified=new Set(),started=Date.now(),swreg=null,ws='',myWs=[],unsubW=null,roomQ='',msgQ='',secTab='public',gview='traces',deleting=false;
 const rq=()=>roomQ.trim().toLowerCase(),mqs=()=>msgQ.trim().toLowerCase();
 const rcol=()=>ws?collection(db,'workspaces',ws,'rooms'):collection(db,'rooms');
@@ -600,6 +603,7 @@ log.addEventListener('click',e=>{
  const w=e.target.closest('.who');if(w&&w.dataset.uid)showCard(w.dataset.uid,w.dataset.n)});
 
 onAuthStateChanged(auth,u=>{
+ hideSplash();
  unsubR&&unsubR();unsubM&&unsubM();unsubD&&unsubD();unsubO&&unsubO();unsubB&&unsubB();unsubW&&unsubW();ws='';myWs=[];Object.keys(watch).forEach(k=>{watch[k]();delete watch[k]});unread={};setTitle();blocked=new Set();dms=[];curKind='room';started=Date.now();
  if(u){me=u;prof={};gate.style.display='none';chip();loadProf();start();handleJoin();
   if(matchMedia('(max-width:760px)').matches)app.classList.remove('chatting')}
