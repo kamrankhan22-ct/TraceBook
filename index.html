@@ -4,8 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#17233F">
-<link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="icon-512.png">
 <title>TraceBook</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 48 48%27%3E%3Ccircle cx=%2724%27 cy=%2724%27 r=%2722%27 fill=%27%2317233F%27/%3E%3Cpath d=%27M24 34C19 31 14 30 11 31V16c3-1 8 0 13 3 5-3 10-4 13-3v15c-3-1-8 0-13 3z%27 fill=%27none%27 stroke=%27%23EEF1EF%27 stroke-width=%272%27/%3E%3Cpath d=%27M14 22c4-1 7 1 10 3s7 1 10-1%27 fill=%27none%27 stroke=%27%23E26A5D%27 stroke-width=%272.2%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -125,15 +123,9 @@ background-image:repeating-linear-gradient(transparent 0 33px,color-mix(in srgb,
 #gate h2{margin:0 0 6px;font-family:var(--serif);font-size:34px;line-height:1.05}
 #gate p{margin:0 0 18px;line-height:1.5;color:var(--pencil)}
 #gb{display:grid;gap:10px}
-#gate .legal{margin:4px 0 0;font-size:12px;line-height:1.5;color:var(--pencil);text-align:center}#gate .legal a{color:var(--me)}
 
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) #log .day:only-child::before{filter:invert(.92) hue-rotate(180deg)}}
 :root[data-theme="dark"] #log .day:only-child::before{filter:invert(.92) hue-rotate(180deg)}
-#splash{position:fixed;inset:0;z-index:50;background:#17233F;display:grid;place-items:center;transition:opacity .35s}
-#splash.out{opacity:0;pointer-events:none}
-#splash .sp{display:grid;justify-items:center;gap:14px;color:#EEF1EF}
-#splash svg{width:88px;height:88px}
-#splash b{font:700 36px var(--serif);letter-spacing:.01em}
 /* ---------- motion ---------- */
 @keyframes draw{to{stroke-dashoffset:0}}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
@@ -164,21 +156,78 @@ header.top h1{font-size:25px}
 #log{padding-right:12px}.msg .body{font-size:17px}
 }
 </style>
+<style>
+.mav{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;vertical-align:middle;margin-right:8px;font:800 12px var(--ui);color:#fff;position:relative;top:-2px}
+.mav.on{box-shadow:0 0 0 2px var(--paper),0 0 0 4px #2E9E5B}
+.dot-on{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2E9E5B;margin-left:6px}
+.badge{display:inline-block;background:var(--margin);color:#fff;border-radius:99px;font-size:11px;font-weight:800;padding:1px 7px;margin-left:8px}
+.sec{padding:14px 20px 4px;font-size:13px;font-weight:800;color:var(--pencil)}
+.chip{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:99px;padding:0 10px;font:inherit;font-size:14px;height:26px;margin-right:6px}.chip.on{border-color:var(--me)}
+.rxs{display:flex;height:34px;align-items:center}
+.quote{height:34px;font:14px/34px var(--ui);color:var(--pencil);border-left:3px solid var(--line);padding-left:8px}
+#pv{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:30;border:0;border-radius:99px;padding:12px 18px;font:700 14px var(--ui);background:#F4E26B;color:#17233F;box-shadow:0 10px 24px -10px rgba(0,0,0,.5);cursor:pointer}
+</style>
+<style>:root[data-theme="light"]{--paper:#EEF1EF;--paper2:#E2E8E6;--ink:#17233F;--pencil:#6A778C;--margin:#C8473B;--line:#C9D3D6;--me:#2B4C9B}:root[data-theme="dark"]{--paper:#141B2B;--paper2:#1B2438;--ink:#E7ECF4;--pencil:#8E9BB3;--margin:#E26A5D;--line:#26314A;--me:#8FB0FF}.msg .body{font-size:var(--mfs,18px)!important}.seg{display:flex;gap:6px}.seg button{flex:1;border:1px solid var(--line);background:var(--paper);color:inherit;border-radius:4px;font:inherit;padding:8px;cursor:pointer}.seg button.on{border-color:var(--ink);background:var(--ink);color:var(--paper)}#pc h4{margin:8px 0 0;font:800 12px var(--ui);color:var(--pencil);letter-spacing:.06em;text-transform:uppercase}#pc label.chk{display:flex;gap:8px;align-items:flex-start;color:var(--ink);font-size:14px}#pc label.chk input{width:auto;margin-top:3px}
+'+HCSS+'
+#gg{display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#1f1f1f;border-color:#dadce0}#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:12px 18px;border-radius:4px;z-index:20;max-width:90%;text-align:center}
+#rp{padding:8px 20px;background:var(--paper2);border-top:1px solid var(--line);font-size:14px;color:var(--pencil);display:flex;justify-content:space-between;gap:10px;align-items:center}#rp[hidden]{display:none}#rp span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#rp button{border:0;background:none;color:inherit;font-size:20px;cursor:pointer}.quote{height:34px;line-height:34px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--pencil);font:14px/34px var(--ui);border-left:3px solid var(--line);padding-left:8px}.rxs{display:flex;gap:6px;height:34px;align-items:center;overflow-x:auto}.chip{border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:99px;padding:0 10px;font:inherit;font-size:14px;height:26px;cursor:pointer;flex:none}.chip.on{border-color:var(--me)}.act{border:0;background:none;color:var(--pencil);font-size:16px;cursor:pointer;margin-left:6px;padding:0 4px;line-height:inherit;opacity:.65}.badge{display:inline-block;background:var(--margin);color:#fff;border-radius:99px;font-size:11px;font-weight:800;padding:1px 7px;margin-left:8px}
+#pm{position:fixed;inset:0;z-index:11;background:rgba(10,15,30,.6);display:none;align-items:center;justify-content:center;padding:20px}#pc{max-width:360px;width:100%;background:var(--paper2);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--margin);border-radius:4px;padding:24px;display:grid;gap:12px;max-height:100%;overflow:auto}#pc h3{margin:0;font-family:"Cormorant Garamond",Georgia,serif;font-size:28px}#pc label{display:grid;gap:4px;font-size:13px;color:var(--pencil)}.pav{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font-size:28px;font-weight:800;color:#fff;object-fit:cover}.pb{margin:0;line-height:1.5;color:var(--pencil)}.sws{display:flex;gap:10px;flex-wrap:wrap}.sw{width:34px;height:34px;border-radius:50%;border:3px solid transparent;cursor:pointer}.sw.on{border-color:var(--ink)}.prow{display:flex;gap:10px}.prow .btn{flex:1}.who{cursor:pointer}.acct .ab{display:grid;gap:4px;flex:none}.tg{display:flex;gap:6px;flex-wrap:wrap}.tg span{border:1px solid var(--line);border-radius:99px;padding:2px 10px;font-size:13px}.em{display:flex;gap:6px;flex-wrap:wrap}.em button{font-size:20px;border:2px solid transparent;background:var(--paper);border-radius:6px;padding:2px 6px;cursor:pointer}.em button.on{border-color:var(--ink)}#pc a{color:var(--me)}.rsb{padding:8px 20px 0}.rsb input{width:100%}#msb{display:flex;gap:8px;align-items:center;padding:8px 20px;border-bottom:1px solid var(--line);background:var(--paper2)}#msb[hidden]{display:none}#msb input{flex:1}#mc{font-size:13px;color:var(--pencil);white-space:nowrap}#msb button{border:0;background:none;color:inherit;font-size:22px;cursor:pointer}mark{background:#F4E26B;color:#17233F;border-radius:2px}#sb{margin-left:auto;border:1px solid var(--line);background:none;color:inherit;border-radius:4px;font-size:16px;padding:4px 10px;cursor:pointer}#sb+#dt{margin-left:8px}.wsbar{display:flex;gap:6px;padding:10px 20px;border-bottom:1px solid var(--line)}.wsbar select{flex:1;min-width:0;font:inherit;color:inherit;background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:8px}.wsbar button{border:1px solid var(--line);background:var(--paper);color:inherit;border-radius:4px;font:inherit;font-size:13px;padding:0 10px;cursor:pointer}.wsbar button[hidden]{display:none}.dot-on{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2E9E5B;margin-left:6px}.mav.on{box-shadow:0 0 0 2px var(--paper),0 0 0 4px #2E9E5B}.mav{display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px;font:800 12px var(--ui);color:#fff;position:relative;top:-2px}img.mav{display:inline-block}.sec{display:flex;justify-content:space-between;align-items:center;padding:14px 20px 4px;font-size:13px;font-weight:800;color:var(--pencil)}#np{border:1px solid var(--line);background:var(--paper);color:inherit;border-radius:4px;font:inherit;font-size:12px;padding:3px 8px;cursor:pointer}.pr{display:flex;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);padding:8px 0;color:inherit;font:inherit;cursor:pointer}.pr small{display:block;color:var(--pencil);font-size:12px}.pav.sm{width:36px;height:36px;font-size:16px;flex:none}.pl{max-height:50vh;overflow:auto}#dt{margin-left:auto;border:1px solid var(--line);background:none;color:var(--margin);font:inherit;font-size:13px;padding:6px 10px;border-radius:4px;cursor:pointer}.del{border:0;background:none;color:var(--pencil);font-size:20px;cursor:pointer;margin-left:8px;padding:0 6px;line-height:inherit;opacity:.65}.del:hover{color:var(--margin);opacity:1}
+#pc:has(.hubw){max-width:580px;padding:0;gap:0;overflow:hidden;display:flex;flex-direction:column;max-height:92vh;border-radius:22px!important}
+.hubw{display:flex;flex-direction:column;min-height:0;max-height:92vh}
+.hbanner{position:relative;display:flex;gap:18px;align-items:center;padding:28px 26px 22px 34px;border-bottom:1px solid var(--line);background:radial-gradient(120% 140% at 0% 0%,var(--wash1),transparent 60%),radial-gradient(90% 120% at 100% 100%,var(--wash2),transparent 65%),repeating-linear-gradient(transparent 0 33px,color-mix(in srgb,var(--line) 70%,transparent) 33px 34px)}
+.hbanner::before{content:"";position:absolute;left:18px;top:0;bottom:0;width:2px;background:var(--margin);opacity:.5}
+.hav{flex:none}.hav .pav{width:86px;height:86px;font-size:36px;box-shadow:0 0 0 4px var(--paper),0 0 0 6px var(--margin)}
+.hid{min-width:0}#pc .hid h3{margin:0;font-size:34px;line-height:1.05;overflow:hidden;text-overflow:ellipsis}
+.hid p{margin:3px 0 10px;color:var(--pencil);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hchips{display:flex;gap:6px;flex-wrap:wrap}.hchips span{border:1px solid var(--line);background:color-mix(in srgb,var(--paper) 82%,transparent);border-radius:99px;padding:3px 10px;font-size:12px;font-weight:600;display:inline-flex;align-items:center}
+.hx{position:absolute;right:12px;top:8px;border:0;background:none;color:inherit;font-size:30px;line-height:1;cursor:pointer;opacity:.7}
+.htabs{display:flex;gap:2px;padding:6px 12px 0;border-bottom:1px solid var(--line);overflow-x:auto;background:var(--paper2)}
+.htabs button{border:0;background:none;color:var(--pencil);font:inherit;font-weight:600;padding:11px 14px;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+.htabs button.on{color:var(--ink);border-bottom-color:var(--margin)}
+.hbody{display:grid;gap:12px;padding:16px 20px 22px;overflow:auto;flex:1;min-height:0;align-content:start}
+.hcard{display:grid;gap:10px;border:1px solid var(--line);border-radius:16px;padding:14px 16px;background:color-mix(in srgb,var(--paper) 72%,transparent);box-shadow:0 12px 24px -22px rgba(23,35,63,.6)}
+.gcard{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--line);padding-top:10px}.gcard:first-of-type{border-top:0;padding-top:0}.gcard small{display:block;color:var(--pencil);font-size:12px}.gact{display:flex;gap:6px}.gact .btn{padding:7px 12px;font-size:13px}
+.tips{margin:0;padding:0;list-style:none;display:grid;gap:8px}.tips li{display:flex;gap:10px;align-items:center;font-size:14px}.tips b{min-width:52px;text-align:center;border:1px solid var(--line);border-radius:8px;padding:2px 6px;background:var(--paper);font-size:13px}
+@media (max-width:520px){.hbanner{flex-direction:column;align-items:flex-start;gap:12px;padding-left:30px}.hav .pav{width:72px;height:72px;font-size:30px}}
+.seg button{font:inherit}</style>
+<style>.wsbar{display:none!important}.secbar{display:flex;gap:6px;padding:10px 14px 0}.st{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;border:1px solid var(--line);background:var(--paper);color:var(--pencil);border-radius:14px;padding:8px 4px 7px;font:600 12px var(--ui);cursor:pointer;position:relative;transition:transform .15s,box-shadow .15s}.st span{font-size:18px}.st:hover{transform:translateY(-1px)}.st.on{color:#fff;border-color:transparent;box-shadow:0 10px 18px -12px rgba(0,0,0,.6)}.st-public.on{background:linear-gradient(135deg,#2B4C9B,#17233F)}.st-groups.on{background:linear-gradient(135deg,#2E7D5B,#17402F)}.st-private.on{background:linear-gradient(135deg,#8A5BB5,#3F2A5C)}.st .badge{position:absolute;top:-6px;right:-2px;margin:0}.sc{--acc:#2B4C9B;padding-bottom:8px}.sc-groups{--acc:#2E7D5B}.sc-private{--acc:#8A5BB5}.sh{display:flex;align-items:center;gap:12px;margin:10px 10px 6px;padding:12px 14px;border-radius:16px;border:1px solid color-mix(in srgb,var(--acc) 35%,var(--line));background:linear-gradient(135deg,color-mix(in srgb,var(--acc) 16%,var(--paper)),var(--paper));position:relative;overflow:hidden}.sh::after{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--acc)}.si{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:20px;background:color-mix(in srgb,var(--acc) 22%,var(--paper));flex:none}.sx{flex:1;min-width:0}.sx b{display:block;font-family:var(--serif);font-size:22px;line-height:1.05;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sx small{display:block;font-size:12px;color:var(--pencil);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sb{border:1px solid var(--line);background:var(--paper);color:inherit;border-radius:10px;font:600 12px var(--ui);padding:6px 10px;cursor:pointer;flex:none}.sb:hover{background:var(--ink);color:var(--paper)}.sc .room.on{box-shadow:inset 3px 0 0 var(--acc),0 8px 18px -12px rgba(23,35,63,.45)}.gc{display:flex;align-items:center;gap:12px;width:calc(100% - 16px);margin:4px 8px;padding:11px 12px;border:1px solid var(--line);border-left:4px solid var(--acc);border-radius:14px;background:var(--paper);color:inherit;font:inherit;text-align:left;cursor:pointer;transition:transform .18s,box-shadow .18s}.gc:hover{transform:translateX(3px);box-shadow:0 10px 20px -16px rgba(23,35,63,.6)}.gi{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--acc),color-mix(in srgb,var(--acc) 60%,#000));flex:none}.gt{flex:1;min-width:0}.gt b{display:block}.gt small{display:block;color:var(--pencil);font-size:12px}.gv{font-size:22px;color:var(--pencil)}.emp{padding:6px 22px}.emp2{margin:8px;padding:18px;border:1px dashed var(--line);border-radius:16px;display:grid;gap:12px;text-align:center}.wsbar{display:none}</style>
+<style>.fbr{display:flex;gap:8px}.fbr button{flex:1;font-size:32px;line-height:1;padding:10px 0;border:2px solid transparent;background:var(--paper);border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:transform .15s}.fbr button small{font:600 11px var(--ui);color:var(--pencil)}.fbr button:hover{transform:translateY(-2px)}.fbr button.on{border-color:var(--margin);background:color-mix(in srgb,var(--margin) 10%,var(--paper));transform:scale(1.04)}</style>
+<style>.dl{display:grid}.drow{display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:14px}.drow span:first-child{color:var(--pencil);flex:none}.drow span:last-child{text-align:right;overflow-wrap:anywhere}
+.mbox{border:1px solid var(--line);border-left:4px solid var(--margin);border-radius:12px;padding:12px 14px;background:var(--paper);font-family:var(--txt);font-size:17px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:30vh;overflow:auto}
+#ib{margin-left:auto;border:1px solid var(--line);background:none;color:inherit;border-radius:10px;font-size:16px;padding:4px 10px;cursor:pointer}#rt{cursor:pointer}.msg time{cursor:pointer}.msg time:hover{color:var(--ink);text-decoration:underline}</style>
+<style>.msg .bt{overflow-wrap:anywhere}.msg.me .bt{color:var(--me)}
+.msg .bt a{color:var(--me);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+.msg.emo .bt{font-size:28px;line-height:34px;vertical-align:-3px}
+.msg.grp .who,.msg.grp .mav{display:none}
+.msg.grp time{opacity:0;transition:opacity .15s}.msg.grp:hover time{opacity:1}
+.msg .act,.msg .del{opacity:0;transition:opacity .15s}.msg:hover .act,.msg:hover .del,.msg:focus-within .act,.msg:focus-within .del{opacity:.9}
+@media (hover:none){.msg .act,.msg .del{opacity:.7}}
+.msg .quote{background:color-mix(in srgb,var(--ink) 6%,transparent);border-radius:0 8px 8px 0}
+#log[data-ms="bubbles"]{background-image:none;padding:14px 4px 10px 0}
+#log[data-ms="bubbles"] .msg{display:flex;flex-direction:column;align-items:flex-start;padding:2px 16px;min-height:0;background:none;border-radius:0}
+#log[data-ms="bubbles"] .msg.me{align-items:flex-end}
+#log[data-ms="bubbles"] .msg .rule{display:none}
+#log[data-ms="bubbles"] .msg time{order:2;text-align:left;padding:3px 8px 0;font-size:11px}
+#log[data-ms="bubbles"] .msg.me time{text-align:right}
+#log[data-ms="bubbles"] .msg .body{order:1;max-width:min(80%,540px);background:var(--paper2);border:1px solid var(--line);border-radius:20px 20px 20px 6px;padding:9px 15px;line-height:1.5;font-size:16.5px!important;font-style:normal;box-shadow:0 8px 18px -14px rgba(23,35,63,.5)}
+#log[data-ms="bubbles"] .msg.me .body{background:linear-gradient(135deg,#2B4C9B,#1B2E66);color:#fff;border-color:transparent;border-radius:20px 20px 6px 20px}
+#log[data-ms="bubbles"] .msg.me .who{color:#BFD0FF}
+#log[data-ms="bubbles"] .msg.me .bt{color:#fff}
+#log[data-ms="bubbles"] .msg.me .bt a,#log[data-ms="bubbles"] .msg.me .del,#log[data-ms="bubbles"] .msg.me .act{color:#F4E26B}
+#log[data-ms="bubbles"] .msg .quote{height:auto;line-height:1.4;white-space:normal;padding:4px 8px;margin-bottom:5px}
+#log[data-ms="bubbles"] .msg.me .quote{color:#DCE6FF;border-color:rgba(255,255,255,.45);background:rgba(255,255,255,.12)}
+#log[data-ms="bubbles"] .rxs{height:auto;padding-top:6px;flex-wrap:wrap}
+#log[data-ms="bubbles"] .msg.emo .body{background:none;border:0;box-shadow:none;padding:0 4px}
+#log[data-ms="bubbles"] .msg.emo .bt{font-size:40px;line-height:1.2}
+#log[data-ms="bubbles"] .msg.grp{margin-top:-3px}
+#log[data-ms="bubbles"] .day{padding:12px 0 6px;text-align:center;height:auto}
+#log[data-ms="bubbles"] .day::after{display:none}
+#log[data-ms="bubbles"] .typing{padding-left:20px}
+
+#ms{position:fixed;right:14px;top:calc(14px + env(safe-area-inset-top,0px));z-index:30;border:0;border-radius:99px;padding:10px 16px;font:700 13px var(--ui);background:#17233F;color:#fff;box-shadow:0 10px 24px -10px rgba(0,0,0,.5);cursor:pointer}.msg .bt{font:inherit}</style>
 </head>
 <body>
-<div id="splash" aria-label="Loading TraceBook" role="status">
- <div class="sp">
-  <svg viewBox="0 0 48 48" fill="none" stroke="#EEF1EF" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
-   <circle class="dr" pathLength="1" cx="24" cy="24" r="22.5"/><circle class="dr" pathLength="1" style="animation-delay:.15s" cx="24" cy="24" r="19.5" stroke-width=".7"/>
-   <path class="dr" pathLength="1" style="animation-delay:.3s" d="M24 34.5C19.5 31 13.5 30 10 31.2V15.2C13.5 14 19.5 15 24 18.8C28.5 15 34.5 14 38 15.2V31.2C34.5 30 28.5 31 24 34.5Z"/>
-   <path class="dr" pathLength="1" style="animation-delay:.5s" d="M24 18.8V34.5" stroke-width="1.2"/>
-   <path class="dr" pathLength="1" style="animation-delay:.7s" stroke="#E26A5D" d="M13 21.5C17 20 20.5 22 24 24.5C27.5 27 31 25.5 35 23.5" stroke-width="1.8"/>
-   <path d="M24 5.5l1.2 2.4 2.6.4-1.9 1.8.5 2.6L24 11.4l-2.4 1.3.5-2.6-1.9-1.8 2.6-.4z" stroke-width=".8" fill="#F4E26B" stroke="#F4E26B"/>
-  </svg>
-  <b>TraceBook</b>
- </div>
-</div>
-<div id="gate" role="dialog" aria-label="Sign in" style="display:none">
+<div id="gate" role="dialog" aria-label="Sign in">
  <div class="gwrap">
   <section class="hero" aria-hidden="true">
    <div class="hb">
@@ -216,7 +265,6 @@ header.top h1{font-size:25px}
     <button class="btn" id="gm" type="button" style="border:0;background:none;text-decoration:underline">New here? Create an account</button>
     <button class="btn" id="gr" type="button" style="border:0;background:none;font-weight:400;color:var(--pencil)">Forgot password</button>
     <p id="ger" role="alert" style="color:var(--margin);margin:0;font-size:14px"></p>
-    <p class="legal">By continuing, you agree to the <a href="terms.html" target="_blank" rel="noopener">Terms</a> and the <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a>.</p>
    </div>
   </div>
  </div>
@@ -248,6 +296,129 @@ header.top h1{font-size:25px}
   <form id="f"><textarea id="t" rows="1" placeholder="Write a message" aria-label="Message"></textarea><button class="send" id="s" aria-label="Send message" disabled><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></form>
  </main>
 </div>
-<script type="module" src="app.js"></script>
+<button id="pv" type="button">See inside the app</button>
+<script>
+var on=false,g=document.getElementById('gate'),b=document.getElementById('pv');
+document.getElementById('rooms').innerHTML=
+ '<button class="room on"><b><span>General</span><i>9:15 AM</i></b><p>You: On my way to the archive.</p></button>'
++'<button class="room"><b><span>Field notes<span class="badge">2</span></span><i>8:40 AM</i></b><p>Mara: Boundary photos uploaded</p></button>'
++'<button class="room"><b><span>Studio</span><i>Yesterday</i></b><p>Pilar: Proofs are back</p></button>'
++'<div class="sec">Private chats</div>'
++'<button class="room"><b><span>\u{1F512} Mara<span class="dot-on"></span></span><i>9:02 AM</i></b><p>See you at the archive</p></button>'
++'<div class="sec">Online now (2)</div>'
++'<button class="room"><span class="dot-on" style="margin:0 8px 0 0"></span>Mara</button><button class="room"><span class="dot-on" style="margin:0 8px 0 0"></span>Idris</button>';
+document.getElementById('acct').innerHTML='<span class="av" style="background:#2B4C9B">Y</span><div><b>You</b><small>\u{1F331} Writing slowly</small></div><div class="ab" style="display:grid;gap:4px;flex:none"><button type="button">Profile</button><button type="button">Settings</button></div>';
+document.getElementById('rt').textContent='General';document.getElementById('rs').textContent='Shared with everyone signed in';
+function m(t,c,n,txt,me,x){return '<div class="msg'+(me?' me':'')+'"><time>'+t+'</time><span class="rule"></span><div class="body"><span class="mav'+(x||'')+'" style="background:'+c+'">'+n[0]+'</span><span class="who">'+n+'</span>'+txt+'</div></div>'}
+document.getElementById('log').innerHTML='<div class="day">Today</div>'
++m('9:12 AM','#2E7D5B','Mara','Found the old survey map in the archive. The northern boundary is off by about forty metres.',0,' on')
++'<div class="msg"><time></time><span class="rule"></span><div class="body"><div class="rxs"><span class="chip on">\u{1F44D} 2</span><span class="chip">\u2764\uFE0F 1</span></div></div></div>'
++m('9:14 AM','#8A5BB5','Idris','That explains the drainage problem. Can you photograph it?',0,' on')
++'<div class="msg me"><time>9:15 AM</time><span class="rule"></span><div class="body"><div class="quote">\u21A9 Idris: That explains the drainage problem\u2026</div><span class="mav" style="background:#2B4C9B">Y</span><span class="who">You</span>Already on my way to the archive.</div></div>';
+b.onclick=function(){on=!on;g.style.display=on?'none':'flex';b.textContent=on?'See the welcome screen':'See inside the app'};
+</script>
+
+<button id="pv2" type="button" style="position:fixed;left:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:30;border:0;border-radius:99px;padding:12px 18px;font:700 14px var(--ui);background:#17233F;color:#fff;box-shadow:0 10px 24px -10px rgba(0,0,0,.5);cursor:pointer">Open My space</button>
+<div id="pm" style="display:none"><div id="pc"></div></div>
+<script>
+var TABS=[['profile','Profile'],['settings','Settings'],['privacy','Privacy'],['groups','Groups'],['feedback','Feedback'],['about','About']];
+var AV='<span class="pav" style="background:#2B4C9B">Y</span>';
+function seg(a,i){return '<div class="seg">'+a.map(function(x,k){return '<button type="button"'+(k===i?' class="on"':'')+'>'+x+'</button>'}).join('')+'</div>'}
+var B={
+profile:'<div class="hcard"><h4>Photo and name</h4><div>'+AV+'</div><div class="prow"><button class="btn" type="button">Choose photo</button><button class="btn" type="button">Remove</button></div><label>Name<input value="Hemant"></label><label>Status<input value="Writing slowly, one line at a time"></label></div>'
+ +'<div class="hcard"><h4>About you</h4><label>Mood</label><div class="em"><button class="on">\u{1F331}</button><button>\u{1F60E}</button><button>\u{1F4DA}</button><button>\u2615</button><button>\u{1F3A7}</button></div><label>City<input value="Jaipur"></label><label>Interests<input value="music, books, cricket"></label></div>'
+ +'<div class="hcard"><h4>Colour</h4><label>Used when you have no photo</label><div class="sws"><button class="sw on" style="background:#2B4C9B"></button><button class="sw" style="background:#C8473B"></button><button class="sw" style="background:#2E7D5B"></button><button class="sw" style="background:#8A5BB5"></button></div></div>'
+ +'<div class="prow"><button class="btn" type="button">Cancel</button><button class="btn primary" type="button">Save changes</button></div>',
+settings:'<div class="hcard"><h4>Appearance</h4><label>Theme</label>'+seg(['Auto','Light','Dark'],0)+'<label>Message text size</label>'+seg(['Small','Medium','Large'],1)+'</div><div class="hcard"><h4>Chat</h4><label class="chk"><input type="checkbox" checked> Press Enter to send (Shift+Enter makes a new line)</label></div><div class="hcard"><h4>Notifications</h4><p class="pb">Browser notifications: <b>Off</b></p><button class="btn" type="button">Turn on notifications</button></div>',
+privacy:'<div class="hcard"><h4>Who can see you</h4><label class="chk"><input type="checkbox"> Hide my online status</label><p class="pb">When this is on, others will not see you in Online now.</p></div><div class="hcard"><h4>Blocked people</h4><div class="pb">No one is blocked.</div></div>',
+groups:'<div class="hcard"><h4>Your spaces</h4><div class="gcard"><div><b>Public (everyone)</b><small>Open to everyone who is signed in</small></div><div class="gact"><button class="btn">Open</button></div></div><div class="gcard"><div><b>Class 12 notes</b><small>8 members \u00b7 You own this</small></div><div class="gact"><button class="btn">Manage</button><button class="btn">Open</button></div></div></div><button class="btn primary" type="button">+ Create or join a group</button>',
+feedback:'<div class="hcard"><h4>How is TraceBook for you?</h4><div class="fbr"><button class="on" type="button">\u{1F60D}<small>Love it</small></button><button type="button">\u{1F642}<small>Good</small></button><button type="button">\u{1F610}<small>Okay</small></button><button type="button">\u{1F61E}<small>Bad</small></button></div></div><div class="hcard"><h4>What is it about?</h4><div class="seg" style="flex-wrap:wrap"><button class="on" type="button">Idea</button><button type="button">Bug</button><button type="button">Something I like</button><button type="button">Other</button></div></div><div class="hcard"><h4>Tell us more</h4><textarea rows="4" placeholder="What happened? What would make it better?"></textarea><small class="pb">0/500</small></div><button class="btn primary" type="button">Send feedback</button><p class="pb">Your name is attached so we can reply. Thank you, this really helps!</p>',
+about:'<div class="hcard"><h4>Account</h4><p class="pb">you@example.com</p><button class="btn" type="button" style="color:var(--margin)">Sign out</button></div><div class="hcard"><h4>Quick tips</h4><ul class="tips"><li><b>\u263A</b> React to a message</li><li><b>\u21A9</b> Reply to a message</li><li><b>\u{1F50D}</b> Search inside a chat</li><li><b>+ Group</b> Make a private space and invite people</li></ul></div><div class="hcard"><h4>Install on your phone</h4><p class="pb">Open your browser menu and choose <b>Add to Home screen</b>.</p></div>'
+};
+function hub(t){
+ var tabs=TABS.map(function(x){return '<button type="button" data-t="'+x[0]+'" class="'+(x[0]===t?'on':'')+'">'+x[1]+'</button>'}).join('');
+ var h='<div class="hubw"><div class="hbanner"><button class="hx" id="hx" type="button" aria-label="Close">\u00d7</button><div class="hav"><span class="pav" style="background:#2B4C9B">Y</span></div><div class="hid"><h3>Hemant \u{1F331}</h3><p>Writing slowly, one line at a time</p><div class="hchips"><span><i class="dot-on" style="margin:0 6px 0 0"></i>Online</span><span>Joined Oct 2026</span><span>2 groups</span></div></div></div><nav class="htabs" role="tablist">TABS</nav><div class="hbody" id="hubc">BODY</div></div>';
+ h=h.replace('TABS',tabs).replace('BODY',B[t]);
+ document.getElementById('pc').innerHTML=h;document.getElementById('pm').style.display='flex';
+ document.getElementById('hx').onclick=function(){document.getElementById('pm').style.display='none'};
+ document.querySelector('.htabs').onclick=function(e){var b=e.target.closest('button');if(b)hub(b.dataset.t)};
+}
+document.getElementById('pv2').onclick=function(){document.getElementById('gate').style.display='none';hub('profile')};
+document.getElementById('pm').addEventListener('click',function(e){if(e.target.id==='pm')e.target.style.display='none'});
+</script>
+
+<script>
+(function(){
+var tab='public',view='list';
+var rooms=document.getElementById('rooms');
+rooms.insertAdjacentHTML('beforebegin','<div class="secbar" id="secbar"></div>');
+function head(i,t,s,r){return '<div class="sh"><div class="si">'+i+'</div><div class="sx"><b>'+t+'</b><small>'+s+'</small></div>'+(r||'')+'</div>'}
+function room(n,t,p,on,b){return '<button class="room'+(on?' on':'')+'"><b><span>'+n+(b?'<span class="badge">'+b+'</span>':'')+'</span><i>'+t+'</i></b><p>'+p+'</p></button>'}
+function draw(){
+ var T=[['public','\u{1F310}','Public'],['groups','\u{1F465}','Groups'],['private','\u{1F512}','Private']];
+ document.getElementById('secbar').innerHTML=T.map(function(t){return '<button type="button" class="st st-'+t[0]+(tab===t[0]?' on':'')+'" data-s="'+t[0]+'"><span>'+t[1]+'</span>'+t[2]+(t[0]==='private'?'<em class="badge">1</em>':'')+'</button>'}).join('');
+ var h='';
+ if(tab==='public'){
+  h='<div class="sc sc-public">'+head('\u{1F310}','Public','Open to everyone who is signed in')+room('General','9:15 AM','You: On my way to the archive.',1)+room('Field notes','8:40 AM','Mara: Boundary photos uploaded')+room('Studio','Yesterday','Pilar: Proofs are back')+'</div>';
+ }else if(tab==='groups'){
+  if(view==='list'){
+   h='<div class="sc sc-groups">'+head('\u{1F465}','Groups','Private spaces. Only invited people can see them','<button class="sb" type="button">+ New</button>')
+   +'<button class="gc" data-g="1" type="button"><span class="gi">C</span><span class="gt"><b>Class 12 notes</b><small>8 members \u00b7 you own this</small></span><span class="gv">\u203A</span></button>'
+   +'<button class="gc" data-g="1" type="button"><span class="gi">K</span><span class="gt"><b>Cricket club</b><small>14 members</small></span><span class="gv">\u203A</span></button></div>';
+  }else{
+   h='<div class="sc sc-groups">'+head('\u{1F465}','Class 12 notes','8 members \u00b7 invite only','<button class="sb" id="gall" type="button">All</button><button class="sb" type="button">\u2699</button>')+room('General','10:02 AM','Riya: Chapter 4 notes are up',1)+room('Maths doubts','Yesterday','Aman: Anyone solved Q7?')+'</div>';
+  }
+ }else{
+  h='<div class="sc sc-private">'+head('\u{1F512}','Private chats','Just the two of you','<button class="sb" type="button">+ New</button>')
+  +room('\u{1F512} Mara<span class="dot-on"></span>','9:02 AM','See you at the archive',0,1)+room('\u{1F512} Idris','Yesterday','Thanks for the photo')
+  +'<div class="sec">Online now (2)</div><button class="room"><span class="dot-on" style="margin:0 8px 0 0"></span>Mara</button><button class="room"><span class="dot-on" style="margin:0 8px 0 0"></span>Idris</button></div>';
+ }
+ rooms.innerHTML=h;
+ var nf=document.getElementById('nf');if(nf)nf.style.display=(tab==='public'||(tab==='groups'&&view==='traces'))?'':'none';
+}
+document.getElementById('secbar').addEventListener('click',function(e){var b=e.target.closest('.st');if(!b)return;tab=b.dataset.s;if(tab==='groups')view='list';draw()});
+rooms.addEventListener('click',function(e){if(e.target.closest('.gc')){view='traces';draw()}else if(e.target.closest('#gall')){view='list';draw()}});
+draw();
+})();
+</script>
+
+<script>
+(function(){
+var pm=document.getElementById('pm'),pc=document.getElementById('pc');
+function show(h){pc.innerHTML=h;pm.style.display='flex';var x=pc.querySelector('.cx');if(x)x.onclick=function(){pm.style.display='none'}}
+function row(a,b){return '<div class="drow"><span>'+a+'</span><span>'+b+'</span></div>'}
+document.querySelector('header.top').insertAdjacentHTML('beforeend','<button id="ib" type="button" title="Chat details">\u2139\uFE0F</button>');
+document.getElementById('ib').onclick=document.getElementById('rt').onclick=function(){
+ show('<h3>General</h3><div class="dl">'+row('Type','Public trace')+row('Who can see','Everyone who is signed in')+row('Created by','Hemant')+row('Created','3 Oct 2026')+row('Messages loaded','46')+row('Last message','11 Oct, 9:15 AM by You')+'</div><h4>Who has written here</h4><div class="dl">'+row('You','21 messages')+row('Mara','15 messages')+row('Idris','10 messages')+'</div><div class="prow"><button class="btn cx" type="button">Close</button></div>');
+};
+document.getElementById('log').addEventListener('click',function(e){var t=e.target.closest('time');if(!t||!t.textContent)return;
+ show('<h3>Message details</h3><div class="mbox">Found the old survey map in the archive. The northern boundary is off by about forty metres.</div><div class="dl">'+row('From','Mara')+row('Sent','Sun, 11 Oct 2026, 9:12 AM')+row('Length','103 characters')+'</div><h4>Reactions</h4><div class="dl">'+row('\u{1F44D} 2','You, Idris')+row('\u2764\uFE0F 1','Idris')+'</div><div class="prow"><button class="btn cx" type="button">Close</button><button class="btn" type="button">Reply</button></div>');
+});
+})();
+</script>
+
+<button id="ms" type="button">Style: Notebook</button>
+<script>
+(function(){
+var log=document.getElementById('log');log.dataset.ms='notebook';
+function av(c,n,on){return '<span class="mav'+(on?' on':'')+'" style="background:'+c+'">'+n[0]+'</span>'}
+function msg(o){return '<div class="msg'+(o.me?' me':'')+(o.grp?' grp':'')+(o.emo?' emo':'')+'"><time>'+o.t+'</time><span class="rule"></span><div class="body">'
+ +(o.q?'<div class="quote">\u21A9 '+o.q+'</div>':'')
+ +av(o.c,o.n,o.on)+'<span class="who">'+o.n+'</span><span class="bt">'+o.x+'</span>'
+ +'<button class="act" style="border:0;background:none;color:var(--pencil);cursor:pointer;opacity:.7">\u263A</button><button class="act" style="border:0;background:none;color:var(--pencil);cursor:pointer;opacity:.7">\u21A9</button>'
+ +(o.r?'<div class="rxs">'+o.r+'</div>':'')+'</div></div>'}
+var M=[
+ {t:'9:12 AM',c:'#2E7D5B',n:'Mara',on:1,x:'Found the old survey map in the archive. The northern boundary is off by about forty metres.'},
+ {t:'9:12 AM',c:'#2E7D5B',n:'Mara',grp:1,x:'Photos are here: <a href="#">example.com/map-photos</a>'},
+ {t:'9:14 AM',c:'#8A5BB5',n:'Idris',on:1,x:'That explains the drainage problem. Can you photograph it before anyone moves it?',r:'<span class="chip on">\u{1F44D} 2</span><span class="chip">\u2764\uFE0F 1</span>'},
+ {t:'9:14 AM',c:'#8A5BB5',n:'Idris',grp:1,emo:1,x:'\u{1F64C}\u{1F525}'},
+ {t:'9:15 AM',c:'#2B4C9B',n:'You',me:1,q:'Idris: That explains the drainage problem\u2026',x:'Already on my way to the archive.'},
+ {t:'9:15 AM',c:'#2B4C9B',n:'You',me:1,grp:1,x:'See you there!'}
+];
+log.innerHTML='<div class="day">Today</div>'+M.map(msg).join('');
+var b=document.getElementById('ms');
+b.onclick=function(){var n=log.dataset.ms==='notebook'?'bubbles':'notebook';log.dataset.ms=n;b.textContent='Style: '+(n==='notebook'?'Notebook':'Bubbles')};
+})();
+</script>
 </body>
 </html>
