@@ -60,15 +60,15 @@ const HCSS=`#pc:has(.hubw){max-width:580px;padding:0;gap:0;overflow:hidden;displ
 @media (max-width:520px){.hbanner{flex-direction:column;align-items:flex-start;gap:12px;padding-left:30px}.hav .pav{width:72px;height:72px;font-size:30px}}`;
 document.head.insertAdjacentHTML('beforeend','<style>'+HCSS+'</style>');
 let hubTab='profile';
-const HTABS=[['profile','Profile'],['settings','Settings'],['privacy','Privacy'],['groups','Groups'],['feedback','Feedback'],['about','About']];
+const HTABS=[['profile','Profile'],['settings','Settings'],['privacy','Privacy'],['groups','Groups'],['invite','Invite'],['feedback','Feedback'],['about','About']];
 function openHub(tab){
  hubTab=tab||hubTab;const p=prof||{},n=me.displayName||p.name||'You';
  const joined=p.joined?'<span>Joined '+esc(new Date(p.joined).toLocaleDateString([],{month:'short',year:'numeric'}))+'</span>':'';
- $('pc').innerHTML='<div class="hubw"><div class="hbanner"><button class="hx" id="hx" type="button" aria-label="Close">\u00d7</button><div class="hav">'+avatar({name:n,color:p.color,photoURL:me.photoURL,pic:p.pic})+'</div><div class="hid"><h3>'+esc(n)+(p.mood?' '+esc(p.mood):'')+'</h3><p>'+esc(p.bio||me.email||'')+'</p><div class="hchips"><span>'+(p.hideOnline?'\u25CB Status hidden':'<i class="dot-on" style="margin:0 6px 0 0"></i>Online')+'</span>'+joined+'<span>'+myWs.length+' group'+(myWs.length===1?'':'s')+'</span></div></div></div>'
+ $('pc').innerHTML='<div class="hubw"><div class="hbanner"><button class="hx" id="hx" type="button" aria-label="Close">\u00d7</button><div class="hav">'+avatar({name:n,color:p.color,photoURL:me.photoURL,pic:p.pic})+'</div><div class="hid"><h3>'+esc(n)+(p.mood?' '+esc(p.mood):'')+'</h3><p>'+esc(p.bio||me.email||'')+'</p><div class="hchips"><span>'+(p.hideOnline?'\u25CB Status hidden':'<i class="dot-on" style="margin:0 6px 0 0"></i>Online')+'</span>'+joined+'<span>'+myWs.length+' group'+(myWs.length===1?'':'s')+'</span><span id="hinv" style="cursor:pointer;border-color:var(--margin)">\u{1F517} Invite</span></div></div></div>'
   +'<nav class="htabs" role="tablist">'+HTABS.map(t=>'<button type="button" role="tab" data-t="'+t[0]+'" class="'+(t[0]===hubTab?'on':'')+'">'+t[1]+'</button>').join('')+'</nav><div class="hbody" id="hubc"></div></div>';
- $('pm').style.display='flex';$('hx').onclick=closePm;
+ $('pm').style.display='flex';$('hx').onclick=closePm;if($('hinv'))$('hinv').onclick=()=>openHub('invite');
  $('pc').querySelector('.htabs').onclick=e=>{const b=e.target.closest('button');if(b)openHub(b.dataset.t)};
- if(hubTab==='profile')editProfile();else if(hubTab==='groups')renderGroups();else if(hubTab==='about')renderAbout();else if(hubTab==='feedback')renderFeedback();else renderSettings(hubTab)}
+ if(hubTab==='profile')editProfile();else if(hubTab==='groups')renderGroups();else if(hubTab==='about')renderAbout();else if(hubTab==='feedback')renderFeedback();else if(hubTab==='invite')renderInvite();else renderSettings(hubTab)}
 function renderSettings(part){const B=box();
  const seg=(key,opts)=>'<div class="seg" data-k="'+key+'">'+opts.map(o=>'<button type="button" data-v="'+o[0]+'"'+(String(prefs[key])===o[0]?' class="on"':'')+'>'+o[1]+'</button>').join('')+'</div>';
  if(part==='settings'){
@@ -410,7 +410,7 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').then((
 $('acct').insertAdjacentHTML('beforebegin','<button class="btn" id="nt" type="button" hidden>\u{1F514} Turn on notifications</button>');
 if('Notification' in window&&Notification.permission==='default')$('nt').hidden=false;
 $('acct').insertAdjacentHTML('beforebegin','<button class="btn" id="inv" type="button">\u{1F517} Invite friends</button>');
-$('inv').onclick=()=>openInvite();
+$('inv').onclick=()=>openHub('invite');
 $('nt').onclick=async()=>{try{await Notification.requestPermission()}catch(e){}$('nt').hidden=true;toast(Notification.permission==='granted'?'Notifications are on.':'Notifications are blocked in your browser settings.')};
 
 /* ---------- profile ---------- */
@@ -605,24 +605,33 @@ function waShare(text){window.open('https://wa.me/?text='+encodeURIComponent(tex
 async function nativeShare(text,url){
  if(navigator.share){try{await navigator.share({title:'TraceBook',text,url});return}catch(e){if(e&&e.name==='AbortError')return}}
  copyText(text+' '+url,'Message copied. Paste it anywhere.')}
-async function openInvite(){
- const link=location.origin+'/?ref='+me.uid,msg='Join me on TraceBook, a chat app that looks like a ruled notebook.';
+document.head.insertAdjacentHTML('beforeend','<style>.ivc{position:relative;border:1px solid var(--line);border-radius:20px;padding:20px 20px 18px 38px;background:var(--paper);overflow:hidden;box-shadow:var(--shadow);background-image:repeating-linear-gradient(transparent 0 33px,color-mix(in srgb,var(--line) 70%,transparent) 33px 34px)}.ivc::before{content:"";position:absolute;left:22px;top:0;bottom:0;width:2px;background:var(--margin);opacity:.6}.ivh{display:flex;gap:14px;align-items:center;margin-bottom:8px}.ivt{font-family:var(--serif);font-size:30px;font-weight:700;line-height:1.05}.ticket{margin:12px 0 10px;border:2px dashed color-mix(in srgb,var(--margin) 55%,var(--line));border-radius:14px;padding:8px 8px 8px 14px;display:flex;gap:10px;align-items:center;background:color-mix(in srgb,var(--hi) 24%,var(--paper))}.ticket code{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 13px ui-monospace,Menlo,monospace}.ticket .btn{padding:8px 14px;font-size:13px}.bar{height:10px;border-radius:99px;background:var(--paper);border:1px solid var(--line);overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--margin),var(--hi));border-radius:99px;transition:width .6s}.badges{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.bdg{border:1px solid var(--line);border-radius:14px;padding:10px 4px;text-align:center;background:var(--paper);opacity:.55;filter:grayscale(1)}.bdg.on{opacity:1;filter:none;border-color:var(--margin);box-shadow:0 8px 18px -12px rgba(23,35,63,.5)}.bdg b{display:block;font-size:26px;line-height:1.2}.bdg span{display:block;font-weight:600;font-size:13px}.bdg small{display:block;font-size:11px;color:var(--pencil)}.fr{display:flex;gap:10px;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line)}.fr small{display:block}</style>');
+async function renderInvite(){const B=box();
+ const link=location.origin+'/?ref='+me.uid,msg='Join me on TraceBook, a chat app that looks like a ruled notebook.',n=me.displayName||prof.name||'me';
  const gl=myWs.map(w=>({name:w.name,url:location.origin+'/?join='+w.code}));
- $('pc').innerHTML='<h3>Invite friends</h3><p class="pb">Send your link. When a friend signs up with it, you will see them below.</p>'
-  +'<div class="hcard"><h4>TraceBook link</h4><label>Your link<input id="ivl" readonly></label><div class="prow"><button class="btn primary" id="ivs" type="button">Share</button><button class="btn" id="ivw" type="button">WhatsApp</button><button class="btn" id="ivc" type="button">Copy</button></div></div>'
-  +'<div class="hcard"><h4>Invite to a group</h4>'+(gl.length?gl.map((g,i)=>'<div class="gcard"><div><b>'+esc(g.name)+'</b><small>Private group invite</small></div><div class="gact"><button class="btn gw" data-i="'+i+'" type="button">WhatsApp</button><button class="btn gk" data-i="'+i+'" type="button">Copy</button></div></div>').join(''):'<p class="pb">Make a group in My space, Groups, then invite people into it.</p>')+'</div>'
-  +'<div class="hcard"><h4>Joined with your link</h4><div id="ivj" class="pb">Loading...</div></div><button class="btn" id="ivx" type="button">Close</button>';
- $('pm').style.display='flex';$('ivx').onclick=closePm;$('ivl').value=link;
+ B.innerHTML='<div class="ivc"><div class="ivh">'+avatar({name:n,color:prof.color,photoURL:me.photoURL,pic:prof.pic}).replace('class="pav"','class="pav sm"')+'<div><small class="pb">You are invited</small><div class="ivt">Join '+esc(n)+' on TraceBook</div></div></div>'
+  +'<p class="pb">A chat app that looks like a ruled notebook. No bubbles, just lines on a page.</p>'
+  +'<div class="ticket"><code>'+esc(link.replace(/^https?:\/\//,''))+'</code><button class="btn" id="ivc" type="button">Copy</button></div>'
+  +'<div class="prow"><button class="btn primary" id="ivs" type="button">Share</button><button class="btn" id="ivw" type="button">WhatsApp</button></div></div>'
+  +'<div class="hcard"><h4>Your invite progress</h4><div id="ivp" class="pb">Loading...</div></div>'
+  +'<div class="hcard"><h4>Invite to a group</h4>'+(gl.length?gl.map((g,i)=>'<div class="gcard"><div><b>'+esc(g.name)+'</b><small>Private group invite</small></div><div class="gact"><button class="btn gw" data-i="'+i+'" type="button">WhatsApp</button><button class="btn gk" data-i="'+i+'" type="button">Copy</button></div></div>').join(''):'<p class="pb">Make a group in the Groups tab, then invite people into it.</p>')+'</div>'
+  +'<div class="hcard"><h4>Friends who joined</h4><div id="ivj" class="pb">Loading...</div></div>';
+ $('ivc').onclick=()=>copyText(link,'Invite link copied.');
  $('ivs').onclick=()=>nativeShare(msg,link);
  $('ivw').onclick=()=>waShare(msg+' '+link);
- $('ivc').onclick=()=>copyText(link,'Invite link copied.');
- $('pc').onclick=e=>{const w=e.target.closest('.gw'),k=e.target.closest('.gk');
+ B.onclick=e=>{const w=e.target.closest('.gw'),k=e.target.closest('.gk');
   if(w){const g=gl[+w.dataset.i];waShare('Join my group "'+g.name+'" on TraceBook: '+g.url)}
-  if(k){copyText(gl[+k.dataset.i].url,'Group invite link copied.')}};
+  if(k)copyText(gl[+k.dataset.i].url,'Group invite link copied.')};
  try{const snap=await getDocs(query(collection(db,'users'),where('invitedBy','==',me.uid),limit(30)));
-  const el=$('ivj');if(!el)return;
-  el.innerHTML=snap.empty?'No one yet. Share your link and ask a friend to sign up.':'<b>'+snap.size+' friend'+(snap.size===1?'':'s')+' joined:</b> '+esc(snap.docs.map(d=>d.data().name||'Someone').join(', '))
- }catch(e){const el=$('ivj');if(el)el.textContent='Could not load this right now.'}}
+  if(!$('ivp'))return;
+  const c=snap.size,MS=[[1,'\u270D\uFE0F','Pen pal'],[5,'\u{1F4D6}','Page turner'],[10,'\u{1F3C6}','Author']];
+  const next=MS.find(m=>m[0]>c),target=(next||MS[2])[0];
+  $('ivp').innerHTML='<b>'+c+' friend'+(c===1?'':'s')+' joined with your link</b>'
+   +'<div class="bar" style="margin:10px 0"><i style="width:'+Math.min(100,Math.round(c/target*100))+'%"></i></div>'
+   +'<p class="pb" style="margin:0 0 10px">'+(next?(next[0]-c)+' more to unlock <b>'+next[2]+'</b>':'You are an Author. Thank you for spreading the word!')+'</p>'
+   +'<div class="badges">'+MS.map(m=>'<div class="bdg'+(c>=m[0]?' on':'')+'"><b>'+m[1]+'</b><span>'+m[2]+'</span><small>'+m[0]+' friend'+(m[0]===1?'':'s')+'</small></div>').join('')+'</div>';
+  $('ivj').innerHTML=snap.empty?'No one yet. Share your link and ask a friend to sign up.':snap.docs.map(d=>{const u=d.data();return '<div class="fr">'+avatar(u).replace('class="pav"','class="pav sm"')+'<span><b>'+esc(u.name||'Someone')+(u.mood?' '+esc(u.mood):'')+'</b>'+(u.joined?'<small class="pb">Joined '+esc(joinTxt(u.joined))+'</small>':'')+'</span></div>'}).join('')
+ }catch(e){if($('ivp'))$('ivp').textContent='Could not load this right now.';if($('ivj'))$('ivj').textContent=''}}
 async function openPeople(){
  $('pc').innerHTML='<h3>New private chat</h3><input id="pq" placeholder="Search by name"><div id="pl" class="pl"><p class="pb">Loading...</p></div><button class="btn" id="ppx" type="button">Close</button>';
  $('pm').style.display='flex';$('ppx').onclick=closePm;
