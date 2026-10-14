@@ -27,10 +27,11 @@ const mcol=(id,k)=>k==='dm'?collection(db,'dms',id,'messages'):collection(rdoc(i
 const wsInfo=()=>myWs.find(w=>w.id===ws);
 const canDelRoom=r=>!!r&&((!!r.by&&r.by===me.uid)||(!!ws&&(wsInfo()||{}).owner===me.uid));
 /* ---------- settings ---------- */
-let prefs={theme:'system',size:'m',enter:true};
+let prefs={theme:'system',size:'m',enter:true,mstyle:'notebook'};
 try{prefs={...prefs,...JSON.parse(localStorage.getItem('tb.prefs')||'{}')}}catch(e){}
 function applyPrefs(){const r=document.documentElement;
  if(prefs.theme==='system')r.removeAttribute('data-theme');else r.setAttribute('data-theme',prefs.theme);
+ log.dataset.ms=prefs.mstyle||'notebook';
  r.style.setProperty('--mfs',({s:'16px',m:'18px',l:'21px'})[prefs.size]||'18px')}
 function savePrefs(){try{localStorage.setItem('tb.prefs',JSON.stringify(prefs))}catch(e){}applyPrefs()}
 document.head.insertAdjacentHTML('beforeend','<style>:root[data-theme="light"]{--paper:#EEF1EF;--paper2:#E2E8E6;--ink:#17233F;--pencil:#6A778C;--margin:#C8473B;--line:#C9D3D6;--me:#2B4C9B}:root[data-theme="dark"]{--paper:#141B2B;--paper2:#1B2438;--ink:#E7ECF4;--pencil:#8E9BB3;--margin:#E26A5D;--line:#26314A;--me:#8FB0FF}.msg .body{font-size:var(--mfs,18px)!important}.seg{display:flex;gap:6px}.seg button{flex:1;border:1px solid var(--line);background:var(--paper);color:inherit;border-radius:4px;font:inherit;padding:8px;cursor:pointer}.seg button.on{border-color:var(--ink);background:var(--ink);color:var(--paper)}#pc h4{margin:8px 0 0;font:800 12px var(--ui);color:var(--pencil);letter-spacing:.06em;text-transform:uppercase}#pc label.chk{display:flex;gap:8px;align-items:flex-start;color:var(--ink);font-size:14px}#pc label.chk input{width:auto;margin-top:3px}</style>');
@@ -55,6 +56,34 @@ const HCSS=`#pc:has(.hubw){max-width:580px;padding:0;gap:0;overflow:hidden;displ
 .dl{display:grid}.drow{display:flex;justify-content:space-between;gap:14px;padding:9px 0;border-bottom:1px dashed var(--line);font-size:14px}.drow span:first-child{color:var(--pencil);flex:none}.drow span:last-child{text-align:right;overflow-wrap:anywhere}
 .mbox{border:1px solid var(--line);border-left:4px solid var(--margin);border-radius:12px;padding:12px 14px;background:var(--paper);font-family:var(--txt);font-size:17px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:30vh;overflow:auto}
 #ib{margin-left:8px;border:1px solid var(--line);background:none;color:inherit;border-radius:10px;font-size:16px;padding:4px 10px;cursor:pointer}#ib+#dt{margin-left:8px}#rt{cursor:pointer}.msg time{cursor:pointer}.msg time:hover{color:var(--ink);text-decoration:underline}
+.msg .bt{overflow-wrap:anywhere}.msg.me .bt{color:var(--me)}
+.msg .bt a{color:var(--me);text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:3px}
+.msg.emo .bt{font-size:28px;line-height:34px;vertical-align:-3px}
+.msg.grp .who,.msg.grp .mav{display:none}
+.msg.grp time{opacity:0;transition:opacity .15s}.msg.grp:hover time{opacity:1}
+.msg .act,.msg .del{opacity:0;transition:opacity .15s}.msg:hover .act,.msg:hover .del,.msg:focus-within .act,.msg:focus-within .del{opacity:.9}
+@media (hover:none){.msg .act,.msg .del{opacity:.7}}
+.msg .quote{background:color-mix(in srgb,var(--ink) 6%,transparent);border-radius:0 8px 8px 0}
+#log[data-ms="bubbles"]{background-image:none;padding:14px 4px 10px 0}
+#log[data-ms="bubbles"] .msg{display:flex;flex-direction:column;align-items:flex-start;padding:2px 16px;min-height:0;background:none;border-radius:0}
+#log[data-ms="bubbles"] .msg.me{align-items:flex-end}
+#log[data-ms="bubbles"] .msg .rule{display:none}
+#log[data-ms="bubbles"] .msg time{order:2;text-align:left;padding:3px 8px 0;font-size:11px}
+#log[data-ms="bubbles"] .msg.me time{text-align:right}
+#log[data-ms="bubbles"] .msg .body{order:1;max-width:min(80%,540px);background:var(--paper2);border:1px solid var(--line);border-radius:20px 20px 20px 6px;padding:9px 15px;line-height:1.5;font-size:16.5px!important;font-style:normal;box-shadow:0 8px 18px -14px rgba(23,35,63,.5)}
+#log[data-ms="bubbles"] .msg.me .body{background:linear-gradient(135deg,#2B4C9B,#1B2E66);color:#fff;border-color:transparent;border-radius:20px 20px 6px 20px}
+#log[data-ms="bubbles"] .msg.me .who{color:#BFD0FF}
+#log[data-ms="bubbles"] .msg.me .bt{color:#fff}
+#log[data-ms="bubbles"] .msg.me .bt a,#log[data-ms="bubbles"] .msg.me .del,#log[data-ms="bubbles"] .msg.me .act{color:#F4E26B}
+#log[data-ms="bubbles"] .msg .quote{height:auto;line-height:1.4;white-space:normal;padding:4px 8px;margin-bottom:5px}
+#log[data-ms="bubbles"] .msg.me .quote{color:#DCE6FF;border-color:rgba(255,255,255,.45);background:rgba(255,255,255,.12)}
+#log[data-ms="bubbles"] .rxs{height:auto;padding-top:6px;flex-wrap:wrap}
+#log[data-ms="bubbles"] .msg.emo .body{background:none;border:0;box-shadow:none;padding:0 4px}
+#log[data-ms="bubbles"] .msg.emo .bt{font-size:40px;line-height:1.2}
+#log[data-ms="bubbles"] .msg.grp{margin-top:-3px}
+#log[data-ms="bubbles"] .day{padding:12px 0 6px;text-align:center;height:auto}
+#log[data-ms="bubbles"] .day::after{display:none}
+#log[data-ms="bubbles"] .typing{padding-left:20px}
 .fbr{display:flex;gap:8px}.fbr button{flex:1;font-size:32px;line-height:1;padding:10px 0;border:2px solid transparent;background:var(--paper);border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:transform .15s}.fbr button small{font:600 11px var(--ui);color:var(--pencil)}.fbr button:hover{transform:translateY(-2px)}.fbr button.on{border-color:var(--margin);background:color-mix(in srgb,var(--margin) 10%,var(--paper));transform:scale(1.04)}
 .thx{text-align:center;padding:26px 16px;justify-items:center}.thx .big{font-size:54px;line-height:1}
 @media (max-width:520px){.hbanner{flex-direction:column;align-items:flex-start;gap:12px;padding-left:30px}.hav .pav{width:72px;height:72px;font-size:30px}}`;
@@ -73,7 +102,7 @@ function renderSettings(part){const B=box();
  const seg=(key,opts)=>'<div class="seg" data-k="'+key+'">'+opts.map(o=>'<button type="button" data-v="'+o[0]+'"'+(String(prefs[key])===o[0]?' class="on"':'')+'>'+o[1]+'</button>').join('')+'</div>';
  if(part==='settings'){
   const notif=!('Notification' in window)?'Not supported on this browser':Notification.permission==='granted'?'On':Notification.permission==='denied'?'Blocked in browser settings':'Off';
-  B.innerHTML='<div class="hcard"><h4>Appearance</h4><label>Theme</label>'+seg('theme',[['system','Auto'],['light','Light'],['dark','Dark']])+'<label>Message text size</label>'+seg('size',[['s','Small'],['m','Medium'],['l','Large']])+'</div>'
+  B.innerHTML='<div class="hcard"><h4>Appearance</h4><label>Theme</label>'+seg('theme',[['system','Auto'],['light','Light'],['dark','Dark']])+'<label>Message text size</label>'+seg('size',[['s','Small'],['m','Medium'],['l','Large']])+'<label>Message style</label>'+seg('mstyle',[['notebook','Notebook'],['bubbles','Bubbles']])+'</div>'
    +'<div class="hcard"><h4>Chat</h4><label class="chk"><input type="checkbox" id="sen"> Press Enter to send (Shift+Enter makes a new line)</label></div>'
    +'<div class="hcard"><h4>Notifications</h4><p class="pb">Browser notifications: <b id="snt">'+esc(notif)+'</b></p><button class="btn" id="snb" type="button"'+(notif==='Off'?'':' hidden')+'>Turn on notifications</button></div>';
  }else{
@@ -208,14 +237,16 @@ function renderRooms(){
  }
  $('rooms').innerHTML=h}
 const escRe=x=>x.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
-function hl(text){const q=msgQ.trim();text=text||'';if(!q)return esc(text);
+const isEmoji=t=>{t=(t||'').trim();if(!t||t.length>24)return false;const n=(t.match(/\p{Extended_Pictographic}/gu)||[]).length;return n>=1&&n<=3&&/^[\p{Extended_Pictographic}\p{Emoji_Modifier}\u200d\ufe0f\s]+$/u.test(t)};
+const linkify=h=>h.replace(/(https?:\/\/[^\s<"']+[^\s<"'.,;:!?)\]])/g,'<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+function hl(text){const q=msgQ.trim();text=text||'';if(!q)return linkify(esc(text));
  return text.split(new RegExp('('+escRe(q)+')','ig')).map((p,i)=>i%2?'<mark>'+esc(p)+'</mark>':esc(p)).join('')}
 const REACTS=['👍','❤️','😂','😮','🙏','🔥'];
-const line=(m,n)=>{const mine=m.uid===me.uid,rx=m.reacts||{};
+const line=(m,n,prev)=>{const grp=!!prev&&prev.uid===m.uid&&!m.reply&&(m.ts-prev.ts)<300000&&new Date(m.ts).toDateString()===new Date(prev.ts).toDateString(),emo=isEmoji(m.text);const mine=m.uid===me.uid,rx=m.reacts||{};
  const chips=REACTS.map((e,i)=>{const a=rx['r'+i]||[];return a.length?'<button class="chip'+(a.includes(me.uid)?' on':'')+'" data-id="'+esc(m.id||'')+'" data-i="'+i+'">'+e+' '+a.length+'</button>':''}).join('');
- return '<div class="msg'+(mine?' me':'')+(n?' new':'')+'" data-id="'+esc(m.id||'')+'"><time title="Message details">'+hm(m.ts)+'</time><span class="rule"></span><div class="body">'
+ return '<div class="msg'+(mine?' me':'')+(n?' new':'')+(grp?' grp':'')+(emo?' emo':'')+'" data-id="'+esc(m.id||'')+'"><time title="Message details">'+hm(m.ts)+'</time><span class="rule"></span><div class="body">'
   +(m.reply?'<div class="quote">\u21A9 '+esc(m.reply.name||'')+': '+esc(m.reply.text||'')+'</div>':'')
-  +mav(m)+'<span class="who" data-uid="'+esc(m.uid||'')+'" data-n="'+esc(m.name||'')+'">'+esc(m.name||'Someone')+'</span>'+hl(m.text)
+  +mav(m)+'<span class="who" data-uid="'+esc(m.uid||'')+'" data-n="'+esc(m.name||'')+'">'+esc(m.name||'Someone')+'</span><span class="bt">'+hl(m.text)+'</span>'
   +(m.id?'<button class="act" data-a="react" data-id="'+esc(m.id)+'" title="React" aria-label="React">\u263A</button><button class="act" data-a="reply" data-id="'+esc(m.id)+'" title="Reply" aria-label="Reply">\u21A9</button>':'')
   +(mine&&m.id?'<button class="del" data-id="'+esc(m.id)+'" aria-label="Delete message" title="Delete">\u00d7</button>':'')
   +(chips?'<div class="rxs">'+chips+'</div>':'')+'</div></div>'};
@@ -224,7 +255,7 @@ function renderLog(){const r=(curKind==='dm'?dms:rooms).find(x=>x.id===cur);if(!
  $('rt').textContent=(curKind==='dm'?'\u{1F512} ':'')+r.name;$('rs').textContent=curKind==='dm'?'Private. Only you two can see this.':'Shared with everyone signed in';
  const q=mqs(),vis=shown().filter(m=>!q||((m.text||'')+' '+(m.name||'')).toLowerCase().includes(q));let last='',h=vis.length?'':'<div class="day">'+(q?'No messages match "'+esc(msgQ.trim())+'".':'Empty page. Write the first line below.')+'</div>';
  if($('mc'))$('mc').textContent=q?vis.length+' found':'';
- vis.forEach(m=>{const d=dayLabel(m.ts);if(d!==last){h+='<div class="day">'+d+'</div>';last=d}h+=line(m)});
+ vis.forEach((m,i)=>{const d=dayLabel(m.ts);if(d!==last){h+='<div class="day">'+d+'</div>';last=d}h+=line(m,false,vis[i-1])});
  const atBottom=log.scrollHeight-log.scrollTop-log.clientHeight<80;
  log.innerHTML=h;if(atBottom)log.scrollTop=log.scrollHeight}
 function open(id,k='room'){cur=id;curKind=k;secTab=k==='dm'?'private':(ws?'groups':'public');if(ws&&k==='room')gview='traces';msgs=[];replyTo=null;showReply();delete unread[k+'|'+id];setTitle();msgQ='';if($('mq')){$('mq').value='';$('msb').hidden=true}renderRooms();renderLog();app.classList.add('chatting');
@@ -655,6 +686,9 @@ log.addEventListener('click',e=>{
  if(x){if(confirm('Delete this message?'))deleteDoc(doc(mcol(cur,curKind),x.dataset.id)).catch(z=>alert('Could not delete: '+(z.code||z.message)));return}
  const w=e.target.closest('.who');if(w&&w.dataset.uid)showCard(w.dataset.uid,w.dataset.n)});
 
+log.style.touchAction='manipulation';
+log.addEventListener('dblclick',e=>{const r=e.target.closest('.msg');if(!r||e.target.closest('button,a,time,.who'))return;
+ const m=msgs.find(x=>x.id===r.dataset.id);if(!m||((m.reacts||{}).r1||[]).includes(me.uid))return;toggleReact(m.id,1)});
 onAuthStateChanged(auth,u=>{
  hideSplash();
  unsubR&&unsubR();unsubM&&unsubM();unsubD&&unsubD();unsubO&&unsubO();unsubB&&unsubB();unsubW&&unsubW();ws='';myWs=[];Object.keys(watch).forEach(k=>{watch[k]();delete watch[k]});unread={};setTitle();blocked=new Set();dms=[];curKind='room';started=Date.now();
