@@ -1,4 +1,4 @@
-// TraceBook app.js, build 2026-10-14 r3
+// TraceBook app.js, build 2026-10-14 r4
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithPopup,signInWithRedirect,getRedirectResult,getAdditionalUserInfo,GoogleAuthProvider,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail,setPersistence,browserLocalPersistence,deleteUser,reauthenticateWithPopup,reauthenticateWithCredential,EmailAuthProvider} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {getFirestore,collection,addDoc,onSnapshot,query,orderBy,limit,doc,getDoc,setDoc,deleteDoc,getDocs,writeBatch,where,updateDoc,arrayUnion,arrayRemove} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -87,6 +87,7 @@ const HCSS=`#pc:has(.hubw){max-width:580px;padding:0;gap:0;overflow:hidden;displ
 #log[data-ms="bubbles"] .day::after{display:none}
 #log[data-ms="bubbles"] .typing{padding-left:20px}
 #log[data-ms="bubbles"] .msg:not(.me){padding-left:56px}#log[data-ms="bubbles"] .msg .body{position:relative}#log[data-ms="bubbles"] .msg .mav{position:absolute;left:-40px;bottom:0;top:auto;width:30px;height:30px;font-size:13px;margin:0}#log[data-ms="bubbles"] .msg.me .mav,#log[data-ms="bubbles"] .msg.me .who,#log[data-ms="bubbles"] .msg.grp .who,#log[data-ms="bubbles"] .msg.grp .mav{display:none}#log[data-ms="bubbles"] .msg .who{display:block;font-size:12px;margin:0 0 2px}#log[data-ms="bubbles"] .msg .act,#log[data-ms="bubbles"] .msg .del{font-size:14px;margin-left:4px}
+#mnu{position:fixed;inset:0;z-index:12;display:flex;justify-content:flex-end}#mnu[hidden]{display:none}.mnb{position:absolute;inset:0;background:rgba(10,15,30,.5);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}.mnp{position:relative;width:min(86vw,330px);height:100%;overflow:auto;background:var(--paper2);color:var(--ink);border-left:1px solid var(--line);box-shadow:var(--shadow);padding:calc(16px + env(safe-area-inset-top,0px)) 14px calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:4px;animation:mnslide .25s cubic-bezier(.3,1,.4,1)}@keyframes mnslide{from{transform:translateX(100%)}to{transform:none}}.mnx{align-self:flex-end;border:0;background:none;color:inherit;font-size:30px;line-height:1;cursor:pointer;opacity:.7;padding:0 6px}.mnh{display:flex;gap:12px;align-items:center;text-align:left;border:1px solid var(--line);border-left:4px solid var(--margin);background:var(--paper);color:inherit;border-radius:16px;padding:12px;margin:2px 0 8px;cursor:pointer;font:inherit}.mnh .pav{width:48px;height:48px;font-size:20px;flex:none}.mnh span{min-width:0}.mnh b{display:block;font:700 22px/1.1 var(--serif);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mnh small{display:block;color:var(--pencil);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mi{display:flex;gap:12px;align-items:center;width:100%;padding:13px 12px;border:0;background:none;color:inherit;font:600 16px var(--ui);text-align:left;border-radius:12px;cursor:pointer;text-decoration:none;transition:background .15s}.mi:hover{background:color-mix(in srgb,var(--ink) 7%,transparent)}.mi span{width:26px;text-align:center;font-size:19px}.mi.out{color:var(--margin);margin-top:4px}.mns{height:1px;background:var(--line);margin:8px 6px}.hbm{display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--line);background:var(--paper);color:inherit;border-radius:12px;cursor:pointer;flex:none;transition:background .15s}.hbm:hover{background:var(--paper2)}.brand .hbm{margin-left:auto}header.top .hbm{margin-left:8px;width:38px;height:38px}
 .fbr{display:flex;gap:8px}.fbr button{flex:1;font-size:32px;line-height:1;padding:10px 0;border:2px solid transparent;background:var(--paper);border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:transform .15s}.fbr button small{font:600 11px var(--ui);color:var(--pencil)}.fbr button:hover{transform:translateY(-2px)}.fbr button.on{border-color:var(--margin);background:color-mix(in srgb,var(--margin) 10%,var(--paper));transform:scale(1.04)}
 .thx{text-align:center;padding:26px 16px;justify-items:center}.thx .big{font-size:54px;line-height:1}
 
@@ -384,6 +385,27 @@ $('mq').oninput=e=>{msgQ=e.target.value;renderLog()};
 $('mx').onclick=()=>{$('msb').hidden=true;msgQ='';$('mq').value='';renderLog()};
 $('sb').insertAdjacentHTML('afterend','<button id="ib" type="button" title="Chat details" aria-label="Chat details">\u2139\uFE0F</button>');
 $('ib').onclick=()=>showChatInfo();$('rt').onclick=()=>showChatInfo();
+/* ---------- menu (three lines) ---------- */
+document.body.insertAdjacentHTML('beforeend','<div id="mnu" hidden><div class="mnb"></div><div class="mnp" role="dialog" aria-label="Menu" id="mnp"></div></div>');
+const HAM='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>';
+document.querySelector('.brand').insertAdjacentHTML('beforeend','<button id="mn1" class="hbm" type="button" aria-label="Menu">'+HAM+'</button>');
+$('dt').insertAdjacentHTML('afterend','<button id="mn2" class="hbm" type="button" aria-label="Menu">'+HAM+'</button>');
+function closeMenu(){$('mnu').hidden=true}
+function openMenu(){
+ const n=me.displayName||prof.name||'You';
+ $('mnp').innerHTML='<button class="mnx" id="mnc" type="button" aria-label="Close menu">\u00d7</button>'
+  +'<button class="mnh" data-a="profile" type="button">'+avatar({name:n,color:prof.color,photoURL:me.photoURL,pic:prof.pic})+'<span><b>'+esc(n)+'</b><small>'+esc(me.email||'')+'</small></span></button>'
+  +[['profile','\u{1F464}','My space'],['study','\u{1F9E0}','Study (Recall)'],['invite','\u{1F517}','Invite friends'],['feedback','\u{1F4AC}','Send feedback'],['settings','\u2699\uFE0F','Settings']].map(x=>'<button class="mi" data-a="'+x[0]+'" type="button"><span>'+x[1]+'</span>'+x[2]+'</button>').join('')
+  +'<div class="mns"></div><a class="mi" href="privacy.html" target="_blank" rel="noopener"><span>\u{1F512}</span>Privacy policy</a><a class="mi" href="terms.html" target="_blank" rel="noopener"><span>\u{1F4C4}</span>Terms of use</a>'
+  +'<button class="mi out" data-a="out" type="button"><span>\u21AA</span>Sign out</button>';
+ $('mnu').hidden=false}
+$('mn1').onclick=openMenu;$('mn2').onclick=openMenu;
+$('mnu').onclick=e=>{
+ if(e.target.classList.contains('mnb')||e.target.closest('#mnc')){closeMenu();return}
+ if(e.target.closest('a.mi')){setTimeout(closeMenu,60);return}
+ const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;closeMenu();
+ if(a==='profile')openHub('profile');else if(a==='study')openStudy('today');else if(a==='invite')openHub('invite');else if(a==='feedback')openHub('feedback');else if(a==='settings')openHub('settings');else if(a==='out')doSignOut()};
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('mnu').hidden)closeMenu()});
 $('dt').onclick=async()=>{
  if(curKind==='dm'){const id=cur;if(!confirm('Delete this private chat and all its messages for both of you? This cannot be undone.'))return;
   $('dt').disabled=true;
