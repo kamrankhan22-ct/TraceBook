@@ -1,4 +1,4 @@
-// TraceBook app.js, build 2026-10-14 r2
+// TraceBook app.js, build 2026-10-14 r3
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithPopup,signInWithRedirect,getRedirectResult,getAdditionalUserInfo,GoogleAuthProvider,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail,setPersistence,browserLocalPersistence,deleteUser,reauthenticateWithPopup,reauthenticateWithCredential,EmailAuthProvider} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {getFirestore,collection,addDoc,onSnapshot,query,orderBy,limit,doc,getDoc,setDoc,deleteDoc,getDocs,writeBatch,where,updateDoc,arrayUnion,arrayRemove} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -28,11 +28,12 @@ const mcol=(id,k)=>k==='dm'?collection(db,'dms',id,'messages'):collection(rdoc(i
 const wsInfo=()=>myWs.find(w=>w.id===ws);
 const canDelRoom=r=>!!r&&((!!r.by&&r.by===me.uid)||(!!ws&&(wsInfo()||{}).owner===me.uid));
 /* ---------- settings ---------- */
-let prefs={theme:'system',size:'m',enter:true,mstyle:'notebook'};
+let prefs={theme:'system',size:'m',enter:true,mstyle:'bubbles'};
 try{prefs={...prefs,...JSON.parse(localStorage.getItem('tb.prefs')||'{}')}}catch(e){}
+if(!prefs.mchosen)prefs.mstyle='bubbles';
 function applyPrefs(){const r=document.documentElement;
  if(prefs.theme==='system')r.removeAttribute('data-theme');else r.setAttribute('data-theme',prefs.theme);
- log.dataset.ms=prefs.mstyle||'notebook';
+ log.dataset.ms=prefs.mstyle||'bubbles';
  r.style.setProperty('--mfs',({s:'16px',m:'18px',l:'21px'})[prefs.size]||'18px')}
 function savePrefs(){try{localStorage.setItem('tb.prefs',JSON.stringify(prefs))}catch(e){}applyPrefs()}
 document.head.insertAdjacentHTML('beforeend','<style>:root[data-theme="light"]{--paper:#EEF1EF;--paper2:#E2E8E6;--ink:#17233F;--pencil:#6A778C;--margin:#C8473B;--line:#C9D3D6;--me:#2B4C9B}:root[data-theme="dark"]{--paper:#141B2B;--paper2:#1B2438;--ink:#E7ECF4;--pencil:#8E9BB3;--margin:#E26A5D;--line:#26314A;--me:#8FB0FF}.msg .body{font-size:var(--mfs,18px)!important}.seg{display:flex;gap:6px}.seg button{flex:1;border:1px solid var(--line);background:var(--paper);color:inherit;border-radius:4px;font:inherit;padding:8px;cursor:pointer}.seg button.on{border-color:var(--ink);background:var(--ink);color:var(--paper)}#pc h4{margin:8px 0 0;font:800 12px var(--ui);color:var(--pencil);letter-spacing:.06em;text-transform:uppercase}#pc label.chk{display:flex;gap:8px;align-items:flex-start;color:var(--ink);font-size:14px}#pc label.chk input{width:auto;margin-top:3px}</style>');
@@ -85,6 +86,7 @@ const HCSS=`#pc:has(.hubw){max-width:580px;padding:0;gap:0;overflow:hidden;displ
 #log[data-ms="bubbles"] .day{padding:12px 0 6px;text-align:center;height:auto}
 #log[data-ms="bubbles"] .day::after{display:none}
 #log[data-ms="bubbles"] .typing{padding-left:20px}
+#log[data-ms="bubbles"] .msg:not(.me){padding-left:56px}#log[data-ms="bubbles"] .msg .body{position:relative}#log[data-ms="bubbles"] .msg .mav{position:absolute;left:-40px;bottom:0;top:auto;width:30px;height:30px;font-size:13px;margin:0}#log[data-ms="bubbles"] .msg.me .mav,#log[data-ms="bubbles"] .msg.me .who,#log[data-ms="bubbles"] .msg.grp .who,#log[data-ms="bubbles"] .msg.grp .mav{display:none}#log[data-ms="bubbles"] .msg .who{display:block;font-size:12px;margin:0 0 2px}#log[data-ms="bubbles"] .msg .act,#log[data-ms="bubbles"] .msg .del{font-size:14px;margin-left:4px}
 .fbr{display:flex;gap:8px}.fbr button{flex:1;font-size:32px;line-height:1;padding:10px 0;border:2px solid transparent;background:var(--paper);border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:transform .15s}.fbr button small{font:600 11px var(--ui);color:var(--pencil)}.fbr button:hover{transform:translateY(-2px)}.fbr button.on{border-color:var(--margin);background:color-mix(in srgb,var(--margin) 10%,var(--paper));transform:scale(1.04)}
 .thx{text-align:center;padding:26px 16px;justify-items:center}.thx .big{font-size:54px;line-height:1}
 
@@ -121,7 +123,7 @@ function renderSettings(part){const B=box();
    +'<div class="hcard"><h4>Blocked people</h4><div id="sbl" class="pb">Loading...</div></div>';
  }
  B.querySelectorAll('.seg').forEach(g=>{g.onclick=e=>{const b=e.target.closest('button');if(!b)return;
-  prefs[g.dataset.k]=b.dataset.v;savePrefs();g.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))}});
+  prefs[g.dataset.k]=b.dataset.v;if(g.dataset.k==='mstyle')prefs.mchosen=true;savePrefs();g.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))}});
  if($('sen')){$('sen').checked=prefs.enter!==false;$('sen').onchange=()=>{prefs.enter=$('sen').checked;savePrefs()}}
  if($('snb'))$('snb').onclick=async()=>{try{await Notification.requestPermission()}catch(e){}
   $('snt').textContent=Notification.permission==='granted'?'On':'Blocked in browser settings';$('snb').hidden=true;if($('nt'))$('nt').hidden=true};
