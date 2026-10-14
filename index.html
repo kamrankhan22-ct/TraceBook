@@ -248,6 +248,30 @@ header.top h1{font-size:25px}
   <form id="f"><textarea id="t" rows="1" placeholder="Write a message" aria-label="Message"></textarea><button class="send" id="s" aria-label="Send message" disabled><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></form>
  </main>
 </div>
+<script>
+(function(){
+ var err='';
+ function esc(x){return String(x).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})}
+ window.addEventListener('error',function(e){err=(e.message||'Script error')+(e.filename?' ('+String(e.filename).split('/').pop()+':'+e.lineno+')':'')});
+ window.addEventListener('unhandledrejection',function(e){err=String((e.reason&&e.reason.message)||e.reason||'Unknown error')});
+ setTimeout(function(){
+  var sp=document.getElementById('splash');
+  if(!sp||sp.className.indexOf('out')>-1)return;
+  var b='border:1px solid #3a4a73;background:#EEF1EF;color:#17233F;border-radius:12px;padding:12px 18px;font:700 15px system-ui;cursor:pointer;margin:6px';
+  sp.innerHTML='<div class="sp" style="max-width:340px;padding:0 20px;text-align:center"><b>TraceBook</b>'
+   +'<p style="margin:0;color:#C9D3D6;font:16px/1.5 system-ui">It is taking longer than usual to start.</p>'
+   +(err?'<p style="margin:0;color:#F4A59B;font:13px/1.4 system-ui;overflow-wrap:anywhere">'+esc(err)+'</p>':'')
+   +'<div><button id="rl" style="'+b+'">Reload</button><button id="rs" style="'+b+'">Reset and retry</button></div></div>';
+  document.getElementById('rl').onclick=function(){location.reload()};
+  document.getElementById('rs').onclick=function(){
+   var jobs=[];
+   if(navigator.serviceWorker&&navigator.serviceWorker.getRegistrations)jobs.push(navigator.serviceWorker.getRegistrations().then(function(rs){return Promise.all(rs.map(function(r){return r.unregister()}))}));
+   if(window.caches)jobs.push(caches.keys().then(function(ks){return Promise.all(ks.map(function(k){return caches.delete(k)}))}));
+   Promise.all(jobs).catch(function(){}).then(function(){location.href=location.pathname+'?v='+Date.now()});
+  };
+ },10000);
+})();
+</script>
 <script type="module" src="app.js"></script>
 </body>
 </html>
