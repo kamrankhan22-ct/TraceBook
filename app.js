@@ -86,7 +86,17 @@ const HCSS=`#pc:has(.hubw){max-width:580px;padding:0;gap:0;overflow:hidden;displ
 #log[data-ms="bubbles"] .typing{padding-left:20px}
 .fbr{display:flex;gap:8px}.fbr button{flex:1;font-size:32px;line-height:1;padding:10px 0;border:2px solid transparent;background:var(--paper);border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:transform .15s}.fbr button small{font:600 11px var(--ui);color:var(--pencil)}.fbr button:hover{transform:translateY(-2px)}.fbr button.on{border-color:var(--margin);background:color-mix(in srgb,var(--margin) 10%,var(--paper));transform:scale(1.04)}
 .thx{text-align:center;padding:26px 16px;justify-items:center}.thx .big{font-size:54px;line-height:1}
-@media (max-width:520px){.hbanner{flex-direction:column;align-items:flex-start;gap:12px;padding-left:30px}.hav .pav{width:72px;height:72px;font-size:30px}}`;
+
+.hbanner,.htabs{flex:none}.htabs button{flex:none}
+@media (max-width:520px){
+.hbanner{flex-direction:row;align-items:center;gap:12px;padding:16px 38px 14px 28px}
+.hav .pav{width:64px;height:64px;font-size:28px;box-shadow:0 0 0 3px var(--paper),0 0 0 5px var(--margin)}
+#pc .hid h3{font-size:26px}
+.hid p{font-size:13px;margin:2px 0 8px}
+.hchips{gap:5px}.hchips span,.hchips button{font-size:11px;padding:2px 8px}
+.htabs{padding:4px 8px 0}.htabs button{padding:10px 12px;font-size:14px}
+.hbody{padding:14px 14px 20px}
+}`;
 document.head.insertAdjacentHTML('beforeend','<style>'+HCSS+'</style>');
 let hubTab='profile';
 const HTABS=[['profile','Profile'],['settings','Settings'],['privacy','Privacy'],['groups','Groups'],['invite','Invite'],['feedback','Feedback'],['about','About']];
