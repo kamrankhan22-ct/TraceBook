@@ -1,4 +1,4 @@
-// TraceBook app.js, build 2026-10-14 r6
+// TraceBook app.js, build 2026-10-14 r7
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithPopup,signInWithRedirect,getRedirectResult,getAdditionalUserInfo,GoogleAuthProvider,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail,setPersistence,browserLocalPersistence,deleteUser,reauthenticateWithPopup,reauthenticateWithCredential,EmailAuthProvider} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {getFirestore,collection,addDoc,onSnapshot,query,orderBy,limit,doc,getDoc,setDoc,deleteDoc,getDocs,writeBatch,where,updateDoc,arrayUnion,arrayRemove} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -235,7 +235,7 @@ function renderRooms(){
   h='<div class="sc sc-public">'+head('\u{1F310}','Public','Open to everyone who is signed in')+roomsHtml()+'</div>';
  }else if(secTab==='groups'){
   if(ws&&gview==='traces'){const w=wsInfo()||{name:'Group',members:[]},n=(w.members||[]).length;
-   h='<div class="sc sc-groups">'+head('\u{1F465}',esc(w.name),n+' member'+(n===1?'':'s')+' \u00b7 invite only','<button class="sb" id="gall" type="button">All</button><button class="sb" id="gman" type="button" title="Group settings" aria-label="Group settings">\u2699</button>')+roomsHtml()+'</div>';
+   h='<div class="sc sc-groups">'+head('\u{1F465}',esc(w.name),n+' member'+(n===1?'':'s')+' \u00b7 invite only','<button class="sb" id="gall" type="button">All</button><button class="sb" id="gteam" type="button">Team</button><button class="sb" id="gman" type="button" title="Group settings" aria-label="Group settings">\u2699</button>')+roomsHtml()+'</div>';
   }else{
    const l=myWs.filter(w=>!q||w.name.toLowerCase().includes(q));
    h='<div class="sc sc-groups">'+head('\u{1F465}','Groups','Private spaces. Only invited people can see them','<button class="sb" id="gnw" type="button">+ New</button>')
@@ -327,6 +327,7 @@ async function deleteWs(w){
  for(const r of rs.docs){const ms=await getDocs(collection(r.ref,'messages'));
   for(let i=0;i<ms.docs.length;i+=400){const b=writeBatch(db);ms.docs.slice(i,i+400).forEach(d=>b.delete(d.ref));await b.commit()}
   await deleteDoc(r.ref)}
+ for(const sub of ['tasks','notes','updates']){const ds=await getDocs(collection(db,'workspaces',w.id,sub));for(const d of ds.docs)await deleteDoc(d.ref)}
  await deleteDoc(doc(db,'invites',w.code));await deleteDoc(doc(db,'workspaces',w.id))}
 async function handleJoin(){const c=new URLSearchParams(location.search).get('join');if(!c)return;
  history.replaceState({},'',location.pathname);
@@ -373,6 +374,7 @@ $('f').addEventListener('submit',e=>{e.preventDefault();send()});
 $('rooms').addEventListener('click',e=>{if(e.target.closest('#np')){openPeople();return}
  if(e.target.closest('#gnw')||e.target.closest('#gnw2')){$('wnew').click();return}
  if(e.target.closest('#gall')){gview='list';renderRooms();return}
+ if(e.target.closest('#gteam')){openTeam(ws);return}
  if(e.target.closest('#gman')){$('wset').click();return}
  const gc=e.target.closest('.gc');if(gc){switchWs(gc.dataset.w);return}const o=e.target.closest('.onl');if(o){showCard(o.dataset.u,'');return}const b=e.target.closest('.room');if(b)open(b.dataset.id,b.dataset.k)});
 $('back').addEventListener('click',()=>app.classList.remove('chatting'));
@@ -396,7 +398,7 @@ function openMenu(){
  const n=me.displayName||prof.name||'You';
  $('mnp').innerHTML='<button class="mnx" id="mnc" type="button" aria-label="Close menu">\u00d7</button>'
   +'<button class="mnh" data-a="profile" type="button">'+avatar({name:n,color:prof.color,photoURL:me.photoURL,pic:prof.pic})+'<span><b>'+esc(n)+'</b><small>'+esc(me.email||'')+'</small></span></button>'
-  +[['profile','\u{1F464}','My space'],['study','\u{1F9E0}','Study (Recall)'],['iq','\u{1F9E9}','Brain test'],['invite','\u{1F517}','Invite friends'],['feedback','\u{1F4AC}','Send feedback'],['settings','\u2699\uFE0F','Settings']].map(x=>'<button class="mi" data-a="'+x[0]+'" type="button"><span>'+x[1]+'</span>'+x[2]+'</button>').join('')
+  +[['profile','\u{1F464}','My space'],['study','\u{1F9E0}','Study (Recall)'],['team','\u{1F4BC}','Team workspace'],['iq','\u{1F9E9}','Brain test'],['invite','\u{1F517}','Invite friends'],['feedback','\u{1F4AC}','Send feedback'],['settings','\u2699\uFE0F','Settings']].map(x=>'<button class="mi" data-a="'+x[0]+'" type="button"><span>'+x[1]+'</span>'+x[2]+'</button>').join('')
   +'<div class="mns"></div><a class="mi" href="privacy.html" target="_blank" rel="noopener"><span>\u{1F512}</span>Privacy policy</a><a class="mi" href="terms.html" target="_blank" rel="noopener"><span>\u{1F4C4}</span>Terms of use</a>'
   +'<button class="mi out" data-a="out" type="button"><span>\u21AA</span>Sign out</button>';
  $('mnu').hidden=false}
@@ -405,7 +407,7 @@ $('mnu').onclick=e=>{
  if(e.target.classList.contains('mnb')||e.target.closest('#mnc')){closeMenu();return}
  if(e.target.closest('a.mi')){setTimeout(closeMenu,60);return}
  const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;closeMenu();
- if(a==='profile')openHub('profile');else if(a==='study')openStudy('today');else if(a==='iq')openIQ();else if(a==='invite')openHub('invite');else if(a==='feedback')openHub('feedback');else if(a==='settings')openHub('settings');else if(a==='out')doSignOut()};
+ if(a==='profile')openHub('profile');else if(a==='study')openStudy('today');else if(a==='team')openTeam();else if(a==='iq')openIQ();else if(a==='invite')openHub('invite');else if(a==='feedback')openHub('feedback');else if(a==='settings')openHub('settings');else if(a==='out')doSignOut()};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('mnu').hidden)closeMenu()});
 $('dt').onclick=async()=>{
  if(curKind==='dm'){const id=cur;if(!confirm('Delete this private chat and all its messages for both of you? This cannot be undone.'))return;
@@ -503,7 +505,7 @@ async function ensureProfiles(list){
  renderLog()}
 const COLORS=['#2B4C9B','#C8473B','#2E7D5B','#8A5BB5','#C98A1B','#3B7F9E'];
 let prof={};
-const closePm=()=>{$('pm').style.display='none';if(R)R.flush()};
+const closePm=()=>{$('pm').style.display='none';if(R)R.flush();if(TM)TM.stop()};
 $('pm').addEventListener('click',e=>{if(e.target.id==='pm')closePm()});
 const avatar=p=>(p.pic||p.photoURL)?'<img class="pav" alt="" referrerpolicy="no-referrer" src="'+esc(p.pic||p.photoURL)+'">':'<span class="pav" style="background:'+esc(p.color||COLORS[0])+'">'+esc((p.name||'?').charAt(0).toUpperCase())+'</span>';
 const joinTxt=ts=>{const d=Math.floor((Date.now()-ts)/864e5);return new Date(ts).toLocaleDateString([],{day:'numeric',month:'short',year:'numeric'})+(d<1?' (today)':d<31?' ('+d+' day'+(d===1?'':'s')+' ago)':'')};
@@ -646,6 +648,7 @@ async function wipeMine(){
  for(const w of myWs){
   if(w.owner===me.uid){await deleteWs(w);continue}
   const rs=await getDocs(collection(db,'workspaces',w.id,'rooms'));for(const r of rs.docs)await mine(collection(r.ref,'messages'));
+  for(const sub of ['tasks','notes','updates'])await delWhere(query(collection(db,'workspaces',w.id,sub),where('by','==',me.uid)));
   await updateDoc(doc(db,'workspaces',w.id),{members:arrayRemove(me.uid)})}
  for(const d of dms)await mine(collection(db,'dms',d.id,'messages'));
  await delWhere(query(collection(db,'blocks'),where('by','==',me.uid)));
@@ -714,13 +717,27 @@ async function recall(){
  R=m.initRecall({$,esc,box,db,doc,collection,getDocs,getDoc,setDoc,deleteDoc,toast,closePm,copyText,me:()=>me});
  return R}
 function openStudy(tab,prefill){recall().then(r=>{if(prefill)r.prefill(prefill);r.open(tab||'today')}).catch(e=>toast('The study tool could not load.'))}
-let QZ=null;
+let TM=null,QZ=null;
 async function iqmod(){
  if(QZ)return QZ;
  const m=await import('./iq.js');
  QZ=m.initIQ({$,esc,box,db,doc,getDoc,setDoc,toast,closePm,copyText,me:()=>me});
  return QZ}
 function openIQ(tab){iqmod().then(q=>q.open(tab||'test')).catch(e=>toast('The brain test could not load.'))}
+async function teammod(){
+ if(TM)return TM;
+ const m=await import('./team.js');
+ TM=m.initTeam({$,esc,box,db,doc,collection,getDoc,updateDoc,addDoc,deleteDoc,onSnapshot,query,orderBy,toast,closePm,copyText,me:()=>me,wsList:()=>myWs,pget:u=>pcache[u],avatar:a=>avatar(a)});
+ return TM}
+function openTeam(wid){
+ const go=id=>teammod().then(t=>t.open(id)).catch(e=>toast('The team workspace could not load.'));
+ if(wid)return go(wid);
+ if(ws)return go(ws);
+ if(!myWs.length){toast('Create or join a group first.');openHub('groups');return}
+ if(myWs.length===1)return go(myWs[0].id);
+ $('pc').innerHTML='<h3>Team workspace</h3><p class="pb">Choose a group.</p>'+myWs.map(w=>'<button class="gc" data-w="'+esc(w.id)+'" type="button" style="--acc:#2E7D5B;width:100%;margin:4px 0"><span class="gi">'+esc((w.name||'?').charAt(0).toUpperCase())+'</span><span class="gt"><b>'+esc(w.name)+'</b><small>'+(w.members||[]).length+' members</small></span><span class="gv">\u203A</span></button>').join('')+'<button class="btn" id="tcx" type="button">Close</button>';
+ $('pm').style.display='flex';$('tcx').onclick=closePm;
+ $('pc').querySelectorAll('.gc').forEach(b=>{b.onclick=()=>go(b.dataset.w)})}
 async function openPeople(){
  $('pc').innerHTML='<h3>New private chat</h3><input id="pq" placeholder="Search by name"><div id="pl" class="pl"><p class="pb">Loading...</p></div><button class="btn" id="ppx" type="button">Close</button>';
  $('pm').style.display='flex';$('ppx').onclick=closePm;
