@@ -1,4 +1,4 @@
-// TraceBook app.js, build 2026-10-14 r4
+// TraceBook app.js, build 2026-10-14 r5
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithPopup,signInWithRedirect,getRedirectResult,getAdditionalUserInfo,GoogleAuthProvider,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail,setPersistence,browserLocalPersistence,deleteUser,reauthenticateWithPopup,reauthenticateWithCredential,EmailAuthProvider} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {getFirestore,collection,addDoc,onSnapshot,query,orderBy,limit,doc,getDoc,setDoc,deleteDoc,getDocs,writeBatch,where,updateDoc,arrayUnion,arrayRemove} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -395,7 +395,7 @@ function openMenu(){
  const n=me.displayName||prof.name||'You';
  $('mnp').innerHTML='<button class="mnx" id="mnc" type="button" aria-label="Close menu">\u00d7</button>'
   +'<button class="mnh" data-a="profile" type="button">'+avatar({name:n,color:prof.color,photoURL:me.photoURL,pic:prof.pic})+'<span><b>'+esc(n)+'</b><small>'+esc(me.email||'')+'</small></span></button>'
-  +[['profile','\u{1F464}','My space'],['study','\u{1F9E0}','Study (Recall)'],['invite','\u{1F517}','Invite friends'],['feedback','\u{1F4AC}','Send feedback'],['settings','\u2699\uFE0F','Settings']].map(x=>'<button class="mi" data-a="'+x[0]+'" type="button"><span>'+x[1]+'</span>'+x[2]+'</button>').join('')
+  +[['profile','\u{1F464}','My space'],['study','\u{1F9E0}','Study (Recall)'],['iq','\u{1F9E9}','Brain test'],['invite','\u{1F517}','Invite friends'],['feedback','\u{1F4AC}','Send feedback'],['settings','\u2699\uFE0F','Settings']].map(x=>'<button class="mi" data-a="'+x[0]+'" type="button"><span>'+x[1]+'</span>'+x[2]+'</button>').join('')
   +'<div class="mns"></div><a class="mi" href="privacy.html" target="_blank" rel="noopener"><span>\u{1F512}</span>Privacy policy</a><a class="mi" href="terms.html" target="_blank" rel="noopener"><span>\u{1F4C4}</span>Terms of use</a>'
   +'<button class="mi out" data-a="out" type="button"><span>\u21AA</span>Sign out</button>';
  $('mnu').hidden=false}
@@ -404,7 +404,7 @@ $('mnu').onclick=e=>{
  if(e.target.classList.contains('mnb')||e.target.closest('#mnc')){closeMenu();return}
  if(e.target.closest('a.mi')){setTimeout(closeMenu,60);return}
  const b=e.target.closest('[data-a]');if(!b)return;const a=b.dataset.a;closeMenu();
- if(a==='profile')openHub('profile');else if(a==='study')openStudy('today');else if(a==='invite')openHub('invite');else if(a==='feedback')openHub('feedback');else if(a==='settings')openHub('settings');else if(a==='out')doSignOut()};
+ if(a==='profile')openHub('profile');else if(a==='study')openStudy('today');else if(a==='iq')openIQ();else if(a==='invite')openHub('invite');else if(a==='feedback')openHub('feedback');else if(a==='settings')openHub('settings');else if(a==='out')doSignOut()};
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('mnu').hidden)closeMenu()});
 $('dt').onclick=async()=>{
  if(curKind==='dm'){const id=cur;if(!confirm('Delete this private chat and all its messages for both of you? This cannot be undone.'))return;
@@ -479,6 +479,8 @@ $('acct').insertAdjacentHTML('beforebegin','<button class="btn" id="inv" type="b
 $('inv').onclick=()=>openHub('invite');
 $('acct').insertAdjacentHTML('beforebegin','<button class="btn" id="stb" type="button">\u{1F9E0} Study <span id="stn" class="badge" hidden></span></button>');
 $('stb').onclick=()=>openStudy('today');
+$('acct').insertAdjacentHTML('beforebegin','<button class="btn" id="iqb" type="button">\u{1F9E9} Brain test</button>');
+$('iqb').onclick=()=>openIQ();
 $('nt').onclick=async()=>{try{await Notification.requestPermission()}catch(e){}$('nt').hidden=true;toast(Notification.permission==='granted'?'Notifications are on.':'Notifications are blocked in your browser settings.')};
 
 /* ---------- profile ---------- */
@@ -649,6 +651,7 @@ async function wipeMine(){
  await delWhere(query(collection(db,'feedback'),where('uid','==',me.uid)));
  const dd=await getDocs(collection(db,'users',me.uid,'decks'));for(const d of dd.docs)await deleteDoc(d.ref);
  await deleteDoc(doc(db,'users',me.uid,'study','stats')).catch(()=>{});
+ await deleteDoc(doc(db,'users',me.uid,'study','iq')).catch(()=>{});
  await deleteDoc(doc(db,'users',me.uid))}
 function openDeleteAccount(){
  const pw=((auth.currentUser.providerData||[])[0]||{}).providerId==='password';
@@ -710,6 +713,13 @@ async function recall(){
  R=m.initRecall({$,esc,box,db,doc,collection,getDocs,getDoc,setDoc,deleteDoc,toast,closePm,copyText,me:()=>me});
  return R}
 function openStudy(tab,prefill){recall().then(r=>{if(prefill)r.prefill(prefill);r.open(tab||'today')}).catch(e=>toast('The study tool could not load.'))}
+let QZ=null;
+async function iqmod(){
+ if(QZ)return QZ;
+ const m=await import('./iq.js');
+ QZ=m.initIQ({$,esc,box,db,doc,getDoc,setDoc,toast,closePm,copyText,me:()=>me});
+ return QZ}
+function openIQ(tab){iqmod().then(q=>q.open(tab||'test')).catch(e=>toast('The brain test could not load.'))}
 async function openPeople(){
  $('pc').innerHTML='<h3>New private chat</h3><input id="pq" placeholder="Search by name"><div id="pl" class="pl"><p class="pb">Loading...</p></div><button class="btn" id="ppx" type="button">Close</button>';
  $('pm').style.display='flex';$('ppx').onclick=closePm;
