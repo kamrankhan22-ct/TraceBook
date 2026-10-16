@@ -1,4 +1,4 @@
-// TraceBook app.js, build 2026-10-14 r7
+// TraceBook app.js, build 2026-10-14 r8
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithPopup,signInWithRedirect,getRedirectResult,getAdditionalUserInfo,GoogleAuthProvider,createUserWithEmailAndPassword,signInWithEmailAndPassword,updateProfile,signOut,sendPasswordResetEmail,setPersistence,browserLocalPersistence,deleteUser,reauthenticateWithPopup,reauthenticateWithCredential,EmailAuthProvider} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 import {getFirestore,collection,addDoc,onSnapshot,query,orderBy,limit,doc,getDoc,setDoc,deleteDoc,getDocs,writeBatch,where,updateDoc,arrayUnion,arrayRemove} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
@@ -89,6 +89,7 @@ const HCSS=`#pc:has(.hubw){max-width:580px;padding:0;gap:0;overflow:hidden;displ
 #log[data-ms="bubbles"] .msg:not(.me){padding-left:56px}#log[data-ms="bubbles"] .msg .body{position:relative}#log[data-ms="bubbles"] .msg .mav{position:absolute;left:-40px;bottom:0;top:auto;width:30px;height:30px;font-size:13px;margin:0}#log[data-ms="bubbles"] .msg.me .mav,#log[data-ms="bubbles"] .msg.me .who,#log[data-ms="bubbles"] .msg.grp .who,#log[data-ms="bubbles"] .msg.grp .mav{display:none}#log[data-ms="bubbles"] .msg .who{display:block;font-size:12px;margin:0 0 2px}#log[data-ms="bubbles"] .msg .act,#log[data-ms="bubbles"] .msg .del{font-size:14px;margin-left:4px}
 #mnu{position:fixed;inset:0;z-index:12;display:flex;justify-content:flex-end}#mnu[hidden]{display:none}.mnb{position:absolute;inset:0;background:rgba(10,15,30,.5);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}.mnp{position:relative;width:min(86vw,330px);height:100%;overflow:auto;background:var(--paper2);color:var(--ink);border-left:1px solid var(--line);box-shadow:var(--shadow);padding:calc(16px + env(safe-area-inset-top,0px)) 14px calc(14px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:4px;animation:mnslide .25s cubic-bezier(.3,1,.4,1)}@keyframes mnslide{from{transform:translateX(100%)}to{transform:none}}.mnx{align-self:flex-end;border:0;background:none;color:inherit;font-size:30px;line-height:1;cursor:pointer;opacity:.7;padding:0 6px}.mnh{display:flex;gap:12px;align-items:center;text-align:left;border:1px solid var(--line);border-left:4px solid var(--margin);background:var(--paper);color:inherit;border-radius:16px;padding:12px;margin:2px 0 8px;cursor:pointer;font:inherit}.mnh .pav{width:48px;height:48px;font-size:20px;flex:none}.mnh span{min-width:0}.mnh b{display:block;font:700 22px/1.1 var(--serif);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mnh small{display:block;color:var(--pencil);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.mi{display:flex;gap:12px;align-items:center;width:100%;padding:13px 12px;border:0;background:none;color:inherit;font:600 16px var(--ui);text-align:left;border-radius:12px;cursor:pointer;text-decoration:none;transition:background .15s}.mi:hover{background:color-mix(in srgb,var(--ink) 7%,transparent)}.mi span{width:26px;text-align:center;font-size:19px}.mi.out{color:var(--margin);margin-top:4px}.mns{height:1px;background:var(--line);margin:8px 6px}.hbm{display:grid;place-items:center;width:40px;height:40px;border:1px solid var(--line);background:var(--paper);color:inherit;border-radius:12px;cursor:pointer;flex:none;transition:background .15s}.hbm:hover{background:var(--paper2)}.brand .hbm{margin-left:auto}header.top .hbm{margin-left:8px;width:38px;height:38px}
 .side-foot{grid-template-columns:repeat(3,1fr);gap:8px!important;padding:10px 12px 12px!important}.side-foot>*{grid-column:1/-1}.side-foot>#inv,.side-foot>#stb,.side-foot>#iqb{grid-column:auto;padding:9px 2px;font-size:13px;border-radius:12px;position:relative;white-space:nowrap}.side-foot>#stb .badge{position:absolute;top:-6px;right:-3px;margin:0}
+.stars{display:flex;gap:4px;justify-content:center}.stars button{font-size:40px;line-height:1;border:0;background:none;cursor:pointer;color:var(--line);transition:transform .12s,color .12s;padding:4px 5px}.stars button.on{color:#F4B400}.stars button:hover{transform:scale(1.15)}#fbp .fe button{color:#F4B400;font-size:28px}#fbp .fe button:hover~button{color:var(--line)}
 .fbr{display:flex;gap:8px}.fbr button{flex:1;font-size:32px;line-height:1;padding:10px 0;border:2px solid transparent;background:var(--paper);border-radius:14px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;transition:transform .15s}.fbr button small{font:600 11px var(--ui);color:var(--pencil)}.fbr button:hover{transform:translateY(-2px)}.fbr button.on{border-color:var(--margin);background:color-mix(in srgb,var(--margin) 10%,var(--paper));transform:scale(1.04)}
 .thx{text-align:center;padding:26px 16px;justify-items:center}.thx .big{font-size:54px;line-height:1}
 
@@ -151,13 +152,13 @@ function renderGroups(){const B=box();
   if(m){switchWs(m.dataset.id);closePm();setTimeout(()=>$('wset').click(),60);return}
   if(e.target.closest('#gnew')){closePm();setTimeout(()=>$('wnew').click(),60)}}}
 function renderFeedback(){const B=box();let rate=0,kind='Idea';
- const RT=[['1','\u{1F61E}','Bad'],['2','\u{1F610}','Okay'],['3','\u{1F642}','Good'],['4','\u{1F60D}','Love it']],KD=['Bug','Idea','Something I like','Other'];
- B.innerHTML='<div class="hcard"><h4>How is TraceBook for you?</h4><div class="fbr" id="fbr">'+RT.map(r=>'<button type="button" data-r="'+r[0]+'" aria-label="'+r[2]+'">'+r[1]+'<small>'+r[2]+'</small></button>').join('')+'</div></div>'
+ const RT=[['1','Poor'],['2','Fair'],['3','Good'],['4','Very good'],['5','Excellent']],KD=['Bug','Idea','Something I like','Other'];
+ B.innerHTML='<div class="hcard"><h4>How is TraceBook for you?</h4><div class="stars" id="fbr">'+RT.map(r=>'<button type="button" data-r="'+r[0]+'" aria-label="'+r[0]+' out of 5, '+r[1]+'">\u2605</button>').join('')+'</div><p class="pb" id="fbl" style="text-align:center;min-height:22px">Tap a star</p></div>'
   +'<div class="hcard"><h4>What is it about?</h4><div class="seg" id="fbk" style="flex-wrap:wrap">'+KD.map(k=>'<button type="button" data-v="'+esc(k)+'"'+(k===kind?' class="on"':'')+'>'+esc(k)+'</button>').join('')+'</div></div>'
   +'<div class="hcard"><h4>Tell us more</h4><textarea id="fbt" rows="4" maxlength="500" placeholder="What happened? What would make it better?" style="max-height:none"></textarea><small class="pb"><span id="fbc">0</span>/500</small></div>'
   +'<button class="btn primary" id="fbs" type="button" disabled>Send feedback</button><p class="pb">Your name is attached so we can reply. Thank you, this really helps!</p>';
  $('fbr').onclick=e=>{const b=e.target.closest('button');if(!b)return;rate=+b.dataset.r;
-  $('fbr').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));$('fbs').disabled=false};
+  $('fbr').querySelectorAll('button').forEach((x,i)=>x.classList.toggle('on',i<rate));$('fbl').textContent=rate+' out of 5: '+RT[rate-1][1];$('fbs').disabled=false};
  $('fbk').onclick=e=>{const b=e.target.closest('button');if(!b)return;kind=b.dataset.v;
   $('fbk').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))};
  $('fbt').oninput=()=>{$('fbc').textContent=$('fbt').value.length};
@@ -166,7 +167,7 @@ function renderFeedback(){const B=box();let rate=0,kind='Idea';
   let last=0;try{last=+localStorage.getItem('tb.fbts')||0}catch(e){}
   if(Date.now()-last<30000){toast('Please wait a few seconds before sending again.');return}
   $('fbs').disabled=true;
-  try{await addDoc(collection(db,'feedback'),{uid:me.uid,name:me.displayName||prof.name||'',email:me.email||'',rating:rate,kind,text:$('fbt').value.trim().slice(0,500),ts:Date.now()});
+  try{await addDoc(collection(db,'feedback'),{uid:me.uid,name:me.displayName||prof.name||'',email:me.email||'',rating:rate,scale:5,kind,text:$('fbt').value.trim().slice(0,500),ts:Date.now()});
    try{localStorage.setItem('tb.fbts',String(Date.now()));localStorage.setItem('tb.fbdone','1')}catch(e){}
    B.innerHTML='<div class="hcard thx"><div class="big">\u{1F389}</div><h4>Thank you!</h4><p class="pb">Your feedback was sent. It really helps make TraceBook better.</p><button class="btn" id="fbd" type="button">Close</button></div>';
    $('fbd').onclick=closePm}
@@ -438,7 +439,7 @@ function fbDue(){
 function maybeAskFeedback(){
  const el=$('fbp');if(!el||!me||!el.hidden||$('pm').style.display==='flex'||!fbDue())return;
  el.hidden=false;
- el.innerHTML='<b>How is TraceBook so far?</b><div class="fe">'+[['1','\u{1F61E}'],['2','\u{1F610}'],['3','\u{1F642}'],['4','\u{1F60D}']].map(r=>'<button type="button" data-r="'+r[0]+'" aria-label="Rate '+r[0]+' out of 4">'+r[1]+'</button>').join('')+'</div><div class="fx"><span class="pb" style="font-size:12px">Takes 10 seconds</span><button type="button" id="fbn">Not now</button></div>';
+ el.innerHTML='<b>How is TraceBook so far?</b><div class="fe">'+[1,2,3,4,5].map(r=>'<button type="button" data-r="'+r+'" aria-label="Rate '+r+' out of 5">\u2605</button>').join('')+'</div><div class="fx"><span class="pb" style="font-size:12px">Takes 10 seconds</span><button type="button" id="fbn">Not now</button></div>';
  el.querySelector('.fe').onclick=e=>{const b=e.target.closest('button');if(!b)return;el.hidden=true;fbPreset=+b.dataset.r;openHub('feedback')};
  $('fbn').onclick=()=>{el.hidden=true;lsSet('tb.fbsn',String((+lsGet('tb.fbsn')||0)+1));lsSet('tb.fbsnooze',String(Date.now()+7*864e5))}}
 setInterval(maybeAskFeedback,45000);
